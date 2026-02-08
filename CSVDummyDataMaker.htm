@@ -25,7 +25,7 @@
             <span class="label-tag">作成条件</span>
             開始日: <input type="date" id="startDate" value="2025-01-01"> 〜 
             本日まで、計 <input type="number" id="rowCount" value="800" min="1" style="width: 80px;"> 行
-            <button class="btn-generate" onclick="generateDummy()">① データを生成</button>
+            <button class="btn-generate" onclick="generateDummy()">① 仮想データを生成</button>
         </div>
         <hr>
         <div class="input-group">
@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <textarea id="csvInput" placeholder="ここにCSVデータが生成されます"></textarea>
+    <textarea id="csvInput" placeholder="ここにCSVデータが生成されます　もしくはCSVデータを貼付してJSONに変換できます"></textarea>
 
     <h3>出力結果 (JSON):</h3>
     <pre id="jsonOutput">変換ボタンを押すと結果が表示されます</pre>
@@ -60,7 +60,7 @@
                 return;
             }
 
-            const names = ["田中", "佐藤", "鈴木", "高橋", "伊藤", "渡辺", "山本", "中村"];
+            const names = ["田中Ａ夫", "佐藤Ｂ美", "鈴木Ｃ郎", "高橋Ｄ治", "伊藤Ｅ子", "渡辺Ｆ太", "山本Ｇ香", "中村Ｈ一"];
             const items = ["打合せ", "資料作成", "システム開発", "顧客対応", "事務作業"];
             const contents = ["定例MTG", "見積書作成", "バグ修正", "電話応対", "経費精算", "コードレビュー"];
             
