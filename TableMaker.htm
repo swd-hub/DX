@@ -273,6 +273,30 @@ let columnWidths = {};
 let currentFontSize = 0.9;
 let draggedColIndex = null; // ドラッグ中の列インデックス
 
+// 和暦（R, H, S）を西暦に変換する関数
+function parseJapaneseDate(dateStr) {
+    if (!dateStr) return null;
+    let s = dateStr.trim().replace(/-/g, '/');
+    
+    // 和暦記号がある場合の変換
+    const eras = { 'R': 2018, 'H': 1988, 'S': 1925, 'T': 1911, 'M': 1867 };
+    const firstChar = s.charAt(0).toUpperCase();
+    
+    if (eras[firstChar]) {
+        const parts = s.substring(1).split('.');
+        if (parts.length >= 1) {
+            const year = parseInt(parts[0]) + eras[firstChar];
+            const month = parts[1] || '1';
+            const day = parts[2] || '1';
+            return new Date(`${year}/${month}/${day}`);
+        }
+    }
+    
+    // 和暦でない場合は通常のDateとして処理
+    return new Date(s);
+}
+
+
 function changeFontSize(size) {
     currentFontSize = parseFloat(size);
     document.getElementById('fontSizeDisplay').textContent = currentFontSize + 'rem';
@@ -300,6 +324,27 @@ function handleFile(e) {
 function processData() {
     const text = document.getElementById('csvInput').value.trim();
     if (!text) return;
+
+    // --- 和暦を西暦に変換する補助関数 ---
+    const parseJapaneseDate = (dateStr) => {
+        if (!dateStr) return null;
+        let s = dateStr.trim().replace(/-/g, '/');
+        const eras = { 'R': 2018, 'H': 1988, 'S': 1925, 'T': 1911, 'M': 1867 };
+        const firstChar = s.charAt(0).toUpperCase();
+        
+        if (eras[firstChar]) {
+            const parts = s.substring(1).split('.');
+            if (parts.length >= 1) {
+                const year = parseInt(parts[0]) + eras[firstChar];
+                const month = parts[1] || '1';
+                const day = parts[2] || '1';
+                return new Date(`${year}/${month}/${day}`);
+            }
+        }
+        return new Date(s); // 西暦（2025/10/23等）の場合はそのまま変換
+    };
+    // ----------------------------------
+
     const lines = text.split('\n').filter(l => l.trim() !== "");
     stats.total = lines.length;
     const uniqueLines = [...new Set(lines)];
@@ -312,13 +357,19 @@ function processData() {
     uniqueLines.forEach(line => {
         const cols = line.split(/,|\t/).map(s => s.trim().replace(/^"|"$/g, ''));
         if (cols.length < 4) return;
+        
         itemSet.add(cols[2]);
+
+        // 日付の解析とタイムスタンプの取得
+        const parsedDate = parseJapaneseDate(cols[0]);
+        const timestamp = (parsedDate && !isNaN(parsedDate)) ? parsedDate.getTime() : 0;
+
         tempRecords.push({
-            date: cols[0].replace(/-/g, '/'),
+            date: cols[0], // 表示用には「R7.10.23」など元の文字列を保持
             name: cols[1],
             item: cols[2],
             content: cols[3],
-            ts: new Date(cols[0].replace(/-/g, '/')).getTime()
+            ts: timestamp   // 判定・比較用には数値化された西暦時間を使用
         });
     });
 
@@ -326,6 +377,7 @@ function processData() {
         const map = new Map();
         tempRecords.forEach(r => {
             const key = `${r.name}|${r.item}`;
+            // 同じ名前・項目の場合、より新しいタイムスタンプを採用
             if (!map.has(key) || r.ts > map.get(key).ts) map.set(key, r);
         });
         rawRecords = Array.from(map.values());
@@ -334,7 +386,6 @@ function processData() {
     }
     stats.unique = rawRecords.length;
 
-    // ヘッダー設定がまだない場合のみ初期化
     if (headerConfigs.length === 0) {
         headerConfigs = [
             {
@@ -369,7 +420,6 @@ function processData() {
     document.getElementById('statsPanel').style.display = 'block';
     document.getElementById('configSection').style.display = 'block';
     
-    // データが更新されたらJSONプレビューも更新（表示されている場合）
     if(document.getElementById('rawJsonPreviewArea').style.display === 'block') {
          updateRawJsonPreview();
     }
