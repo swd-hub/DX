@@ -23,13 +23,23 @@
         .stat-value { display: block; font-size: 1.2rem; font-weight: bold; color: var(--primary); }
         .stat-label { font-size: 0.8rem; color: #64748b; }
 
-        .config-grid { display: flex; flex-wrap: wrap; gap: 15px; }
-        .header-item-card { background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 8px; width: 320px; flex-shrink: 0; }
-        .input-row { display: flex; gap: 5px; margin-bottom: 10px; align-items: center; }
+        .config-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+        .header-item-card { background: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; width: 280px; flex-shrink: 0; }
+        .header-item-card.name-card { border: 2px solid var(--primary); background: #eff6ff; }
         
-        .column-filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 10px; }
-        .column-filters div { display: flex; flex-direction: column; font-size: 0.75rem; }
-        .column-filters input { padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 0.8rem; width: 100%; box-sizing: border-box; }
+        .source-name { background: white; padding: 8px; border-radius: 4px; border: 1px solid #bfdbfe; margin-bottom: 8px; font-size: 0.9rem; color: #1e40af; font-weight: 500; word-break: break-word; }
+        
+        .input-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+        .input-row label { font-size: 0.8rem; color: #666; font-weight: bold; }
+        .input-row input { padding: 6px; border: 1px solid var(--border); border-radius: 3px; font-size: 0.85rem; }
+        
+        .column-filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 8px; border-top: 1px dotted #ccc; padding-top: 8px; }
+        .column-filters div { display: flex; flex-direction: column; font-size: 0.7rem; }
+        .column-filters input { padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 0.75rem; width: 100%; box-sizing: border-box; }
+
+        .mode-radio { font-size: 0.8rem; display: flex; justify-content: space-around; background: #fff; padding: 4px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 8px; }
+        .mode-radio label { display: flex; align-items: center; gap: 3px; }
+        .mode-radio input { margin: 0; }
 
         .table-wrapper { width: 100%; overflow-x: auto; background: white; }
         table { width: 100%; border-collapse: collapse; min-width: 800px; }
@@ -43,9 +53,14 @@
         .btn-warning { background: #f59e0b; color: white; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-info { background: #3b82f6; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; margin-right: 4px; }
 
         .data-text-preview { margin-top: 15px; background: #eee; padding: 10px; border-radius: 6px; display: none; }
         .data-text-preview textarea { height: 100px; background: #fff; cursor: text; }
+
+        .config-save-area { background: #f0f4ff; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        #configFileInput { display: none; }
 
         @media print {
             .no-print, .btn-group, textarea, .config-grid, .stats-grid, .data-text-preview { display: none !important; }
@@ -57,13 +72,9 @@
 <body>
 
 <div class="container">
-    <div class="card no-print">
-        <h3>1. 表題（タイトル）を決める</h3>
-        <input type="text" id="tableTitle" placeholder="例：月間まとめ" style="width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px;" oninput="renderTable()">
-    </div>
 
     <div class="card no-print">
-        <h3>2. データの読み込み</h3>
+        <h3>1. データの読み込み</h3>
         <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">枠内を<strong>「2回トントン（ダブルクリック）」</strong>してファイルを選ぶか、貼り付けてください。</p>
         <textarea id="csvInput" ondblclick="document.getElementById('fileHidden').click()" oninput="processData()" placeholder="ここにデータを貼り付けてください"></textarea>
         <input type="file" id="fileHidden" style="display:none" accept=".csv" onchange="handleFile(event)">
@@ -88,9 +99,23 @@
             </div>
         </div>
     </div>
+    
+    <div class="card no-print">
+        <h3>2. 表題（タイトル）を決める</h3>
+        <input type="text" id="tableTitle" placeholder="例：月間まとめ" style="width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px;" oninput="renderTable()">
+    </div>
 
     <div id="configSection" class="card no-print" style="display:none;">
         <h3>3. 項目の表示設定</h3>
+        
+        <div class="config-save-area">
+            <span style="font-weight: bold;">設定のファイル管理：</span>
+            <button class="btn btn-sm btn-success" onclick="exportConfigToFile()">💾 設定を保存</button>
+            <button class="btn btn-sm btn-warning" onclick="document.getElementById('configFileInput').click()">📂 設定を読み込み</button>
+            <button class="btn btn-sm" style="background: #ef4444; color: white;" onclick="resetConfig()">🔄 リセット</button>
+            <input type="file" id="configFileInput" style="display:none" accept=".json" onchange="importConfigFromFile(event)">
+        </div>
+
         <div id="headerSettings" class="config-grid"></div>
     </div>
 
@@ -169,10 +194,33 @@ function processData() {
     stats.unique = rawRecords.length;
 
     if (headerConfigs.length === 0) {
-        headerConfigs = Array.from(itemSet).map((item, i) => ({
-            raw: item, alias: item, order: i + 1, mode: 'content',
-            fDate: '', fFreq: 1, fContent: ''
-        }));
+        headerConfigs = [
+            {
+                raw: '__NAME__', 
+                sourceName: '名前（対象）',
+                displayName: '名前（対象）', 
+                order: 0, 
+                mode: 'content',
+                fDate: '', 
+                fFreq: 1, 
+                fContent: '',
+                isNameColumn: true
+            }
+        ];
+
+        Array.from(itemSet).forEach((item, i) => {
+            headerConfigs.push({
+                raw: item, 
+                sourceName: item,
+                displayName: item, 
+                order: 0, 
+                mode: 'content',
+                fDate: '', 
+                fFreq: 1, 
+                fContent: '',
+                isNameColumn: false
+            });
+        });
     }
 
     document.getElementById('statsPanel').style.display = 'block';
@@ -184,12 +232,17 @@ function processData() {
 function renderHeaderConfigUI() {
     const container = document.getElementById('headerSettings');
     container.innerHTML = headerConfigs.map((config, i) => `
-        <div class="header-item-card">
+        <div class="header-item-card ${config.isNameColumn ? 'name-card' : ''}">
+            <div class="source-name">${config.sourceName}</div>
             <div class="input-row">
-                <span>順序:</span><input type="number" style="width:40px" value="${config.order}" onchange="headerConfigs[${i}].order=parseInt(this.value); renderTable()">
-                <span style="margin-left:5px">名前:</span><input type="text" style="flex:1" value="${config.alias}" oninput="headerConfigs[${i}].alias=this.value; renderTable()">
+                <label>表での項目名</label>
+                <input type="text" value="${config.displayName}" oninput="headerConfigs[${i}].displayName=this.value; renderTable()">
             </div>
-            <div style="font-size:0.85rem; display:flex; justify-content:space-around; background:#fff; padding:5px; border-radius:4px; border:1px solid #e2e8f0;">
+            <div class="input-row">
+                <label>表示順序</label>
+                <input type="number" value="${config.order === 0 ? '' : config.order}" placeholder="1, 2, 3..." onchange="headerConfigs[${i}].order = parseInt(this.value) || 0; renderTable()">
+            </div>
+            <div class="mode-radio">
                 <label><input type="radio" name="m_${i}" value="content" ${config.mode==='content'?'checked':''} onchange="headerConfigs[${i}].mode='content'; renderTable()"> 内容</label>
                 <label><input type="radio" name="m_${i}" value="date" ${config.mode==='date'?'checked':''} onchange="headerConfigs[${i}].mode='date'; renderTable()"> 日付</label>
                 <label><input type="radio" name="m_${i}" value="freq" ${config.mode==='freq'?'checked':''} onchange="headerConfigs[${i}].mode='freq'; renderTable()"> 頻度</label>
@@ -203,10 +256,59 @@ function renderHeaderConfigUI() {
     `).join('');
 }
 
+function exportConfigToFile() {
+    try {
+        const configData = JSON.stringify(headerConfigs, null, 2);
+        const blob = new Blob([configData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `設定_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert('✅ 設定ファイルを保存しました！');
+    } catch (error) {
+        alert('❌ 設定ファイルの保存に失敗しました: ' + error.message);
+    }
+}
+
+function importConfigFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const configData = JSON.parse(e.target.result);
+            if (Array.isArray(configData)) {
+                headerConfigs = configData;
+                renderHeaderConfigUI();
+                renderTable();
+                alert('✅ 設定ファイルを読み込みました！');
+            } else {
+                alert('❌ ファイル形式が正しくありません。');
+            }
+        } catch (error) {
+            alert('❌ 設定ファイルの読み込みに失敗しました: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+    document.getElementById('configFileInput').value = '';
+}
+
+function resetConfig() {
+    if (confirm('⚠️ 設定をリセットしてもよろしいですか？')) {
+        headerConfigs = [];
+        document.getElementById('headerSettings').innerHTML = '';
+        alert('✅ 設定をリセットしました！');
+    }
+}
+
 function getTableData() {
+    // order > 0 の項目だけを取得し、order の値でソート（欠番は無視）
     const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
     const dateLimitValue = document.getElementById('latestDateLimit').value;
-    const dateLimitTs = dateLimitValue ? new Date(dateLimitValue).getTime() : 0;
+    const dateLimitTs = dateLimitValue ? new Date(dateLimitValue + 'T00:00:00').getTime() : 0;
+    const isDedup = document.getElementById('enableDedup').checked;
     
     const grouped = {};
     rawRecords.forEach(r => {
@@ -216,26 +318,47 @@ function getTableData() {
         if (r.ts > grouped[r.name].maxTs) grouped[r.name].maxTs = r.ts;
     });
 
-    const names = Object.keys(grouped).filter(name => {
-        return grouped[name].maxTs >= dateLimitTs;
+    // 名前（対象）でフィルタ：日付制限を超えているもののみ
+    let names = Object.keys(grouped).filter(name => {
+        const maxTs = grouped[name].maxTs;
+        return maxTs >= dateLimitTs;
     }).sort();
 
+    // 各名前ごとに最新のデータのみを使う（dedup が有効な場合）
+    if (isDedup) {
+        Object.keys(grouped).forEach(name => {
+            Object.keys(grouped[name].items).forEach(item => {
+                const items = grouped[name].items[item];
+                if (items.length > 1) {
+                    // 最新のもの以外を削除
+                    const maxTs = Math.max(...items.map(x => x.ts));
+                    grouped[name].items[item] = items.filter(x => x.ts === maxTs);
+                }
+            });
+        });
+    }
+
     const rows = names.map(name => {
-        let hasMatch = false;
         const cells = activeConfigs.map(c => {
+            if (c.raw === '__NAME__') {
+                return name;
+            }
+
             let items = grouped[name].items[c.raw] || [];
+            
+            // フィルタを適用
             if (c.fDate) items = items.filter(it => it.date.includes(c.fDate));
             if (c.fContent) items = items.filter(it => it.content.includes(c.fContent));
             if (items.length === 0 || items.length < c.fFreq) return "-";
-            hasMatch = true;
+            
             if (c.mode === 'freq') return items.length + " 回";
             if (c.mode === 'date') return items[items.length-1].date;
             return items[items.length-1].content;
         });
-        return hasMatch ? [name, ...cells] : null;
-    }).filter(r => r !== null);
+        return cells;
+    });
 
-    return { headers: ["名前（対象）", ...activeConfigs.map(c => c.alias)], rows };
+    return { headers: activeConfigs.map(c => c.displayName), rows };
 }
 
 function renderTable() {
@@ -248,7 +371,7 @@ function renderTable() {
     document.getElementById('statTotal').innerText = stats.total;
     document.getElementById('statFullDup').innerText = stats.fullDup;
     document.getElementById('statUnique').innerText = stats.unique;
-    document.getElementById('statTableDim').innerText = `${rows.length}件 × ${headers.length-1}項目`;
+    document.getElementById('statTableDim').innerText = `${rows.length}件 × ${headers.length}項目`;
 }
 
 function toggleTextPreview(format) {
