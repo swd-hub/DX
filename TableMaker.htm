@@ -105,6 +105,10 @@
         .data-text-preview { margin-top: 15px; background: #eee; padding: 10px; border-radius: 6px; display: none; }
         .data-text-preview textarea { height: 100px; background: #fff; cursor: text; }
 
+        /* 元データ確認用エリアのスタイル */
+        .raw-data-preview { margin-top: 10px; display: none; }
+        .raw-data-preview textarea { height: 150px; background: #fafafa; border: 1px solid #ccc; font-family: monospace; font-size: 0.85rem; }
+
         .config-save-area { background: #f0f4ff; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
         #configFileInput { display: none; }
@@ -114,7 +118,7 @@
 
         @media print {
             /* 画面表示用要素を非表示 */
-            .no-print, .btn-group, textarea, .config-grid, .stats-grid, .data-text-preview { display: none !important; }
+            .no-print, .btn-group, textarea, .config-grid, .stats-grid, .data-text-preview, .raw-data-preview { display: none !important; }
             
             /* ページレイアウト調整 */
             body, .container, .card { 
@@ -180,6 +184,15 @@
                 <div class="stat-item" style="border-color: var(--primary);"><span class="stat-label">今の表のサイズ</span><span id="statTableDim" class="stat-value">0 × 0</span></div>
             </div>
 
+            <div style="margin-bottom: 10px; text-align: right;">
+                <button class="btn btn-sm btn-info" onclick="toggleRawJsonPreview()">📄 元データをJSONで確認</button>
+            </div>
+            
+            <div id="rawJsonPreviewArea" class="raw-data-preview">
+                <strong>変換直後のJSON（名前ごとに整理）：</strong>
+                <textarea id="rawJsonOutput" readonly></textarea>
+            </div>
+
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                 <label style="font-weight: bold; cursor: pointer; display: inline-block; margin-right: 25px;">
                     <input type="checkbox" id="enableDedup" checked onchange="processData()"> 同じ名前のデータが複数ある場合、最新のものだけを表示する
@@ -215,7 +228,6 @@
     <div class="card">
         <div class="btn-group no-print">
             <button class="btn btn-info" onclick="toggleTextPreview('csv')">CSVの中身を確認</button>
-            <button class="btn btn-info" onclick="toggleTextPreview('json')">JSONの中身を確認</button>
             <button class="btn btn-success" onclick="exportCSV()">CSV保存</button>
             <button class="btn btn-warning" onclick="exportJSON()">JSON保存</button>
             <button class="btn btn-primary" onclick="window.print()">印刷 / PDF出力</button>
@@ -310,6 +322,7 @@ function processData() {
     }
     stats.unique = rawRecords.length;
 
+    // ヘッダー設定がまだない場合のみ初期化
     if (headerConfigs.length === 0) {
         headerConfigs = [
             {
@@ -343,8 +356,44 @@ function processData() {
 
     document.getElementById('statsPanel').style.display = 'block';
     document.getElementById('configSection').style.display = 'block';
+    
+    // データが更新されたらJSONプレビューも更新（表示されている場合）
+    if(document.getElementById('rawJsonPreviewArea').style.display === 'block') {
+         updateRawJsonPreview();
+    }
+
     renderHeaderConfigUI();
     renderTable();
+}
+
+function updateRawJsonPreview() {
+    // データを名前をキーにしたオブジェクトに変換して表示
+    const grouped = {};
+    rawRecords.forEach(r => {
+        if (!grouped[r.name]) grouped[r.name] = [];
+        grouped[r.name].push({
+            date: r.date,
+            item: r.item,
+            content: r.content
+        });
+    });
+    document.getElementById('rawJsonOutput').value = JSON.stringify(grouped, null, 2);
+}
+
+// 元データをJSONで表示する機能（名前単位でグルーピング）
+function toggleRawJsonPreview() {
+    const area = document.getElementById('rawJsonPreviewArea');
+    
+    if (area.style.display === 'none') {
+        if (rawRecords.length === 0) {
+            alert('データが読み込まれていません。');
+            return;
+        }
+        updateRawJsonPreview();
+        area.style.display = 'block';
+    } else {
+        area.style.display = 'none';
+    }
 }
 
 function renderHeaderConfigUI() {
