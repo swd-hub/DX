@@ -44,8 +44,13 @@
         .table-wrapper { width: 100%; overflow-x: auto; background: white; }
         table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th, td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; word-wrap: break-word; position: relative; font-size: 0.9rem; }
-        th { background: #f8fafc; font-weight: bold; user-select: none; }
+        th { background: #f8fafc; font-weight: bold; user-select: none; cursor: grab; }
+        th:active { cursor: grabbing; }
         
+        /* ドラッグ中のスタイル */
+        th.dragging-col { opacity: 0.4; background: #e2e8f0; }
+        th.drag-over { border-left: 3px solid var(--primary); }
+
         /* 列幅リサイザー */
         .resizer {
             position: absolute;
@@ -56,6 +61,7 @@
             background: rgba(0,0,0,0.1);
             cursor: col-resize;
             user-select: none;
+            z-index: 10; /* ドラッグ操作より手前に */
         }
         .resizer:hover,
         .resizer.dragging {
@@ -159,6 +165,7 @@
             th, td { 
                 padding: 4px 3px; /* より狭い余白 */
                 font-size: 0.85rem; /* フォントサイズ */
+                border: 1px solid #000 !important; /* 印刷時は黒枠 */
             }
 
             /* リサイザーを非表示 */
@@ -213,6 +220,10 @@
 
     <div id="configSection" class="card no-print" style="display:none;">
         <h3>3. 項目の表示設定</h3>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">
+            下の表で、見出し（ヘッダー）をマウスで<strong>左右にドラッグ＆ドロップ</strong>すると順番を入れ替えられます。<br>
+            ここの入力欄の数字も連動して変わります。
+        </p>
         
         <div class="config-save-area">
             <span style="font-weight: bold;">設定のファイル管理：</span>
@@ -260,6 +271,7 @@ let headerConfigs = [];
 let stats = { total: 0, fullDup: 0, unique: 0 };
 let columnWidths = {};
 let currentFontSize = 0.9;
+let draggedColIndex = null; // ドラッグ中の列インデックス
 
 function changeFontSize(size) {
     currentFontSize = parseFloat(size);
@@ -540,12 +552,23 @@ function renderTable() {
     const { headers, rows, configIndices } = getTableData();
     document.getElementById('displayTitle').innerText = document.getElementById('tableTitle').value;
     
+    // ドラッグ&ドロップイベント用属性を追加
     let html = `<table><thead><tr>`;
     headers.forEach((h, i) => {
-        const width = columnWidths[configIndices[i]] || 'auto';
-        html += `<th style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;">
+        const globalIndex = configIndices[i]; // 全体のconfigにおけるインデックス
+        const width = columnWidths[globalIndex] || 'auto';
+        
+        // draggable="true" を追加し、イベントハンドラを設定
+        html += `<th 
+            draggable="true"
+            data-index="${i}" 
+            ondragstart="handleDragStart(event, ${i})" 
+            ondragover="handleDragOver(event)" 
+            ondrop="handleDrop(event, ${i})"
+            ondragleave="handleDragLeave(event)"
+            style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;">
             ${h}
-            <div class="resizer" onmousedown="startResize(event, ${configIndices[i]})"></div>
+            <div class="resizer" onmousedown="startResize(event, ${globalIndex})"></div>
         </th>`;
     });
     html += `</tr></thead><tbody>`;
@@ -568,8 +591,70 @@ function renderTable() {
     generatePrintStyles();
 }
 
+// --- ドラッグ＆ドロップ制御関数 ---
+
+function handleDragStart(e, index) {
+    // リサイザーをつかんでいる場合はドラッグを開始しない
+    if (e.target.classList.contains('resizer')) {
+        e.preventDefault();
+        return;
+    }
+    draggedColIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.classList.add('dragging-col');
+}
+
+function handleDragOver(e) {
+    e.preventDefault(); // ドロップを許可するために必須
+    e.dataTransfer.dropEffect = 'move';
+    
+    const th = e.target.closest('th');
+    if (th) {
+        th.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    const th = e.target.closest('th');
+    if (th) {
+        th.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e, targetIndex) {
+    e.preventDefault();
+    const th = e.target.closest('th');
+    if (th) th.classList.remove('drag-over');
+    
+    // 自分自身へのドロップは何もしない
+    if (draggedColIndex === null || draggedColIndex === targetIndex) return;
+
+    // 現在表示されている列のConfigを取得（順番通り）
+    const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
+    
+    // 配列内で要素を移動
+    const itemToMove = activeConfigs[draggedColIndex];
+    activeConfigs.splice(draggedColIndex, 1);
+    activeConfigs.splice(targetIndex, 0, itemToMove);
+    
+    // 新しい順番に基づいて、全headerConfigsのorderを書き換える
+    // (activeConfigsにあるものは 1, 2, 3... と振り直し、それ以外は現状維持または0)
+    activeConfigs.forEach((config, index) => {
+        config.order = index + 1;
+    });
+    
+    // UIを更新
+    renderHeaderConfigUI(); // 入力欄の数字も更新
+    renderTable(); // 表を再描画
+    
+    draggedColIndex = null;
+}
+
+// ---------------------------------
+
 function startResize(e, colIndex) {
     e.preventDefault();
+    e.stopPropagation(); // ドラッグ開始を防ぐ
     const startX = e.clientX;
     const startWidth = columnWidths[colIndex] || 100;
     const resizer = e.target;
