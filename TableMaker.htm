@@ -203,8 +203,8 @@
         
         <div class="config-save-area">
             <span style="font-weight: bold;">設定のファイル管理：</span>
-            <button class="btn btn-sm btn-success" onclick="exportConfigToFile()">💾 設定を保存</button>
             <button class="btn btn-sm btn-warning" onclick="document.getElementById('configFileInput').click()">📂 設定を読み込み</button>
+            <button class="btn btn-sm btn-success" onclick="exportConfigToFile()">💾 設定を保存</button>
             <button class="btn btn-sm" style="background: #ef4444; color: white;" onclick="resetConfig()">🔄 リセット</button>
             <input type="file" id="configFileInput" style="display:none" accept=".json" onchange="importConfigFromFile(event)">
         </div>
@@ -214,7 +214,6 @@
 
     <div class="card">
         <div class="btn-group no-print">
-            <button class="btn btn-info">CSVの中身を確認</button>
             <button class="btn btn-info" onclick="toggleTextPreview('csv')">CSVの中身を確認</button>
             <button class="btn btn-info" onclick="toggleTextPreview('json')">JSONの中身を確認</button>
             <button class="btn btn-success" onclick="exportCSV()">CSV保存</button>
