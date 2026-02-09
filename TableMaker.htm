@@ -62,11 +62,51 @@
 
         #configFileInput { display: none; }
 
-        @media print {
-            .no-print, .btn-group, textarea, .config-grid, .stats-grid, .data-text-preview { display: none !important; }
-            body, .container, .card { background: white !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
-            @page { size: A4 landscape; margin: 15mm; }
-        }
+@media print {
+    /* 画面表示用要素を非表示 */
+    .no-print, .btn-group, textarea, .config-grid, .stats-grid, .data-text-preview { display: none !important; }
+    
+    /* ページレイアウト調整 */
+    body, .container, .card { 
+        background: white !important; 
+        padding: 0 !important; 
+        margin: 0 !important; 
+        box-shadow: none !important; 
+    }
+    
+    /* ページサイズと余白設定 */
+    @page { 
+        size: A4 landscape; /* A4横向き */
+        margin: 15mm; /* 余白15mm */
+    }
+    
+    /* テーブル印刷設定 */
+    table { 
+        page-break-inside: avoid; /* テーブルの分割を避ける */
+        width: 100%; 
+    }
+    
+    thead { 
+        display: table-header-group; /* ページごとにヘッダー繰り返し */
+    }
+    
+    tr { 
+        page-break-inside: avoid; /* 行分割を避ける */
+    }
+    
+    /* タイトル印刷設定 */
+    .preview-title { 
+        page-break-after: avoid; /* タイトルの直後改ページを避ける */
+        font-size: 1.4rem; 
+        margin-bottom: 10mm; 
+    }
+    
+    /* テーブルセル調整 */
+    th, td { 
+        padding: 6px; /* 余白調整 */
+        font-size: 0.9rem; /* フォントサイズ */
+    }
+}
     </style>
 </head>
 <body>
