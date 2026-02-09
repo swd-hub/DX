@@ -61,7 +61,7 @@
             background: rgba(0,0,0,0.1);
             cursor: col-resize;
             user-select: none;
-            z-index: 10; /* ドラッグ操作より手前に */
+            z-index: 10;
         }
         .resizer:hover,
         .resizer.dragging {
@@ -111,7 +111,6 @@
         .data-text-preview { margin-top: 15px; background: #eee; padding: 10px; border-radius: 6px; display: none; }
         .data-text-preview textarea { height: 100px; background: #fff; cursor: text; }
 
-        /* 元データ確認用エリアのスタイル */
         .raw-data-preview { margin-top: 10px; display: none; }
         .raw-data-preview textarea { height: 150px; background: #fafafa; border: 1px solid #ccc; font-family: monospace; font-size: 0.85rem; }
 
@@ -119,14 +118,11 @@
 
         #configFileInput { display: none; }
 
-        /* 印刷時の列幅スタイル（動的に生成） */
         #printStyles { display: none; }
 
         @media print {
-            /* 画面表示用要素を非表示 */
             .no-print, .btn-group, textarea, .config-grid, .stats-grid, .data-text-preview, .raw-data-preview { display: none !important; }
             
-            /* ページレイアウト調整 */
             body, .container, .card { 
                 background: white !important; 
                 padding: 0 !important; 
@@ -134,41 +130,36 @@
                 box-shadow: none !important; 
             }
             
-            /* ページサイズと余白設定 */
             @page { 
-                size: A4 landscape; /* A4横向き */
-                margin: 15mm; /* 余白15mm */
+                size: A4 landscape;
+                margin: 15mm;
             }
             
-            /* テーブル印刷設定 */
             table { 
-                page-break-inside: avoid; /* テーブルの分割を避ける */
+                page-break-inside: avoid;
                 width: 100%; 
             }
             
             thead { 
-                display: table-header-group; /* ページごとにヘッダー繰り返し */
+                display: table-header-group;
             }
             
             tr { 
-                page-break-inside: avoid; /* 行分割を避ける */
+                page-break-inside: avoid;
             }
             
-            /* タイトル印刷設定 */
             .preview-title { 
-                page-break-after: avoid; /* タイトルの直後改ページを避ける */
+                page-break-after: avoid;
                 font-size: 1.4rem; 
                 margin-bottom: 10mm; 
             }
             
-            /* テーブルセル調整 */
             th, td { 
-                padding: 4px 3px; /* より狭い余白 */
-                font-size: 0.85rem; /* フォントサイズ */
-                border: 1px solid #000 !important; /* 印刷時は黒枠 */
+                padding: 4px 3px;
+                font-size: 0.85rem;
+                border: 1px solid #000 !important;
             }
 
-            /* リサイザーを非表示 */
             .resizer { display: none !important; }
         }
     </style>
@@ -202,9 +193,13 @@
 
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                 <label style="font-weight: bold; cursor: pointer; display: inline-block; margin-right: 25px;">
-                    <input type="checkbox" id="enableDedup" checked onchange="processData()"> 同じ名前のデータが複数ある場合、最新のものだけを表示する
+                    <input type="checkbox" id="enableDedup" checked onchange="processData()"> 
+                    同じ名前・項目・内容のデータが複数年月日ある場合、最も古い日付のみ残す（チェック時）
                 </label>
-                <div style="margin-top: 10px; font-size: 0.9rem; color: #334155;">
+                <div style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+                    ※ チェック OFF にするとすべてのデータを保持し、「頻度」表示で複数件がカウントされます
+                </div>
+                <div style="margin-top: 15px; font-size: 0.9rem; color: #334155;">
                     <strong>表に表示する基準：</strong>
                     <input type="date" id="latestDateLimit" onchange="renderTable()" style="padding: 5px;">
                     <span>より後に、一度でも記録がある「名前（対象）」だけを表示する</span>
@@ -271,42 +266,76 @@ let headerConfigs = [];
 let stats = { total: 0, fullDup: 0, unique: 0 };
 let columnWidths = {};
 let currentFontSize = 0.9;
-let draggedColIndex = null; // ドラッグ中の列インデックス
+let draggedColIndex = null;
+
+// ============================================
+// ✅ デフォルト日付を設定（1年以上前の04/01）
+// ============================================
+function initializeDefaultDateLimit() {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+    
+    // 1年以上前の最も新しい04/01を計算
+    let targetYear = currentYear - 1;
+    
+    if (currentMonth < 4 || (currentMonth === 4 && currentDay < 1)) {
+        targetYear = currentYear - 2;
+    }
+    
+    const defaultDate = `${targetYear}-04-01`;
+    document.getElementById('latestDateLimit').value = defaultDate;
+}
+
+// ページロード時に実行
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDefaultDateLimit();
+});
 
 // 和暦（R, H, S）を西暦に変換する関数
 function parseJapaneseDate(dateStr) {
     if (!dateStr) return null;
-    let s = dateStr.trim().replace(/-/g, '/');
     
-    // 和暦記号がある場合の変換
-    const eras = { 'R': 2018, 'H': 1988, 'S': 1925, 'T': 1911, 'M': 1867 };
-    const firstChar = s.charAt(0).toUpperCase();
+    let s = dateStr.trim();
     
-    if (eras[firstChar]) {
-        const parts = s.substring(1).split('.');
-        if (parts.length >= 1) {
-            const year = parseInt(parts[0]) + eras[firstChar];
-            const month = parts[1] || '1';
-            const day = parts[2] || '1';
-            return new Date(`${year}/${month}/${day}`);
+    // 和暦（R7.10.23 など）の場合
+    const eraRegex = /^([RHSTM])(\d+)[\./](\d{1,2})[\./](\d{1,2})$/;
+    const match = s.match(eraRegex);
+    
+    if (match) {
+        const eras = { 'R': 2018, 'H': 1988, 'S': 1925, 'T': 1911, 'M': 1867 };
+        const eraChar = match[1];
+        const eraYear = parseInt(match[2]);
+        const month = match[3];
+        const day = match[4];
+        
+        if (eras[eraChar]) {
+            const westernYear = eraYear + eras[eraChar];
+            return new Date(`${westernYear}/${month}/${day}`);
         }
     }
     
-    // 和暦でない場合は通常のDateとして処理
+    // 西暦（2025/10/23 など）の場合
+    const westernRegex = /^(\d{4})[\./](\d{1,2})[\./](\d{1,2})$/;
+    const westMatch = s.match(westernRegex);
+    
+    if (westMatch) {
+        return new Date(`${westMatch[1]}/${westMatch[2]}/${westMatch[3]}`);
+    }
+    
+    // その他の形式は通常のDateで試す
     return new Date(s);
 }
-
 
 function changeFontSize(size) {
     currentFontSize = parseFloat(size);
     document.getElementById('fontSizeDisplay').textContent = currentFontSize + 'rem';
     
-    // テーブルのセルフォントサイズを変更
     document.querySelectorAll('table th, table td').forEach(el => {
         el.style.fontSize = currentFontSize + 'rem';
     });
 
-    // 印刷用スタイルも更新
     generatePrintStyles();
 }
 
@@ -325,28 +354,12 @@ function processData() {
     const text = document.getElementById('csvInput').value.trim();
     if (!text) return;
 
-    // --- 和暦を西暦に変換する補助関数 ---
-    const parseJapaneseDate = (dateStr) => {
-        if (!dateStr) return null;
-        let s = dateStr.trim().replace(/-/g, '/');
-        const eras = { 'R': 2018, 'H': 1988, 'S': 1925, 'T': 1911, 'M': 1867 };
-        const firstChar = s.charAt(0).toUpperCase();
-        
-        if (eras[firstChar]) {
-            const parts = s.substring(1).split('.');
-            if (parts.length >= 1) {
-                const year = parseInt(parts[0]) + eras[firstChar];
-                const month = parts[1] || '1';
-                const day = parts[2] || '1';
-                return new Date(`${year}/${month}/${day}`);
-            }
-        }
-        return new Date(s); // 西暦（2025/10/23等）の場合はそのまま変換
-    };
-    // ----------------------------------
-
     const lines = text.split('\n').filter(l => l.trim() !== "");
     stats.total = lines.length;
+    
+    // ============================================
+    // ステップ1：完全重複排除（無条件に1件だけ残す）
+    // ============================================
     const uniqueLines = [...new Set(lines)];
     stats.fullDup = stats.total - uniqueLines.length;
 
@@ -360,30 +373,48 @@ function processData() {
         
         itemSet.add(cols[2]);
 
-        // 日付の解析とタイムスタンプの取得
         const parsedDate = parseJapaneseDate(cols[0]);
         const timestamp = (parsedDate && !isNaN(parsedDate)) ? parsedDate.getTime() : 0;
 
         tempRecords.push({
-            date: cols[0], // 表示用には「R7.10.23」など元の文字列を保持
+            date: cols[0],
             name: cols[1],
             item: cols[2],
             content: cols[3],
-            ts: timestamp   // 判定・比較用には数値化された西暦時間を使用
+            ts: timestamp
         });
     });
 
+    // ============================================
+    // ステップ2：年月日が異なり「名前・項目・内容」が同じ場合の処理
+    // ============================================
+    const map = new Map();
+
+    tempRecords.forEach(r => {
+        // キー：「名前 | 項目 | 内容」（日付は含めない）
+        const key = `${r.name}|${r.item}|${r.content}`;
+        
+        if (!map.has(key)) {
+            map.set(key, r);
+        } else {
+            const existing = map.get(key);
+            
+            if (isDedup) {
+                // ✅ ON（デフォルト）：最も古い日付のみ残す
+                if (r.ts < existing.ts) {
+                    map.set(key, r);
+                }
+            }
+        }
+    });
+
     if (isDedup) {
-        const map = new Map();
-        tempRecords.forEach(r => {
-            const key = `${r.name}|${r.item}`;
-            // 同じ名前・項目の場合、より新しいタイムスタンプを採用
-            if (!map.has(key) || r.ts > map.get(key).ts) map.set(key, r);
-        });
         rawRecords = Array.from(map.values());
     } else {
+        // チェック OFF：すべてのレコードをそのまま保持
         rawRecords = tempRecords;
     }
+    
     stats.unique = rawRecords.length;
 
     if (headerConfigs.length === 0) {
@@ -429,7 +460,6 @@ function processData() {
 }
 
 function updateRawJsonPreview() {
-    // データを名前をキーにしたオブジェクトに変換して表示
     const grouped = {};
     rawRecords.forEach(r => {
         if (!grouped[r.name]) grouped[r.name] = [];
@@ -442,7 +472,6 @@ function updateRawJsonPreview() {
     document.getElementById('rawJsonOutput').value = JSON.stringify(grouped, null, 2);
 }
 
-// 元データをJSONで表示する機能（名前単位でグルーピング）
 function toggleRawJsonPreview() {
     const area = document.getElementById('rawJsonPreviewArea');
     
@@ -537,7 +566,6 @@ function getTableData() {
     const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
     const dateLimitValue = document.getElementById('latestDateLimit').value;
     const dateLimitTs = dateLimitValue ? new Date(dateLimitValue + 'T00:00:00').getTime() : 0;
-    const isDedup = document.getElementById('enableDedup').checked;
     
     const grouped = {};
     rawRecords.forEach(r => {
@@ -551,18 +579,6 @@ function getTableData() {
         const maxTs = grouped[name].maxTs;
         return maxTs >= dateLimitTs;
     }).sort();
-
-    if (isDedup) {
-        Object.keys(grouped).forEach(name => {
-            Object.keys(grouped[name].items).forEach(item => {
-                const items = grouped[name].items[item];
-                if (items.length > 1) {
-                    const maxTs = Math.max(...items.map(x => x.ts));
-                    grouped[name].items[item] = items.filter(x => x.ts === maxTs);
-                }
-            });
-        });
-    }
 
     const rows = names.map(name => {
         const cells = activeConfigs.map(c => {
@@ -587,7 +603,6 @@ function getTableData() {
 }
 
 function generatePrintStyles() {
-    // 印刷時の列幅とフォントサイズスタイルを生成
     let styles = '@media print {\n';
     Object.keys(columnWidths).forEach(colIndex => {
         const width = columnWidths[colIndex];
@@ -602,13 +617,11 @@ function renderTable() {
     const { headers, rows, configIndices } = getTableData();
     document.getElementById('displayTitle').innerText = document.getElementById('tableTitle').value;
     
-    // ドラッグ&ドロップイベント用属性を追加
     let html = `<table><thead><tr>`;
     headers.forEach((h, i) => {
-        const globalIndex = configIndices[i]; // 全体のconfigにおけるインデックス
+        const globalIndex = configIndices[i];
         const width = columnWidths[globalIndex] || 'auto';
         
-        // draggable="true" を追加し、イベントハンドラを設定
         html += `<th 
             draggable="true"
             data-index="${i}" 
@@ -637,14 +650,12 @@ function renderTable() {
     document.getElementById('statUnique').innerText = stats.unique;
     document.getElementById('statTableDim').innerText = `${rows.length}件 × ${headers.length}項目`;
 
-    // 印刷用スタイルを生成
     generatePrintStyles();
 }
 
 // --- ドラッグ＆ドロップ制御関数 ---
 
 function handleDragStart(e, index) {
-    // リサイザーをつかんでいる場合はドラッグを開始しない
     if (e.target.classList.contains('resizer')) {
         e.preventDefault();
         return;
@@ -655,7 +666,7 @@ function handleDragStart(e, index) {
 }
 
 function handleDragOver(e) {
-    e.preventDefault(); // ドロップを許可するために必須
+    e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
     const th = e.target.closest('th');
@@ -676,26 +687,20 @@ function handleDrop(e, targetIndex) {
     const th = e.target.closest('th');
     if (th) th.classList.remove('drag-over');
     
-    // 自分自身へのドロップは何もしない
     if (draggedColIndex === null || draggedColIndex === targetIndex) return;
 
-    // 現在表示されている列のConfigを取得（順番通り）
     const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
     
-    // 配列内で要素を移動
     const itemToMove = activeConfigs[draggedColIndex];
     activeConfigs.splice(draggedColIndex, 1);
     activeConfigs.splice(targetIndex, 0, itemToMove);
     
-    // 新しい順番に基づいて、全headerConfigsのorderを書き換える
-    // (activeConfigsにあるものは 1, 2, 3... と振り直し、それ以外は現状維持または0)
     activeConfigs.forEach((config, index) => {
         config.order = index + 1;
     });
     
-    // UIを更新
-    renderHeaderConfigUI(); // 入力欄の数字も更新
-    renderTable(); // 表を再描画
+    renderHeaderConfigUI();
+    renderTable();
     
     draggedColIndex = null;
 }
@@ -704,7 +709,7 @@ function handleDrop(e, targetIndex) {
 
 function startResize(e, colIndex) {
     e.preventDefault();
-    e.stopPropagation(); // ドラッグ開始を防ぐ
+    e.stopPropagation();
     const startX = e.clientX;
     const startWidth = columnWidths[colIndex] || 100;
     const resizer = e.target;
