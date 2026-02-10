@@ -386,12 +386,6 @@
             cursor: pointer;
         }
 
-        .textarea-help {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin: 0 0 10px 0;
-        }
-
         /* プリント対応 */
         @media print { 
             .toggle-btn, 
@@ -445,7 +439,7 @@
     
     <div class="setting-section">
         <h3>1️⃣ データ読込</h3>
-        <p class="textarea-help">CSVを貼り付けるか、ダブルクリックしてファイル選択</p>
+        <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 10px 0;">CSVを貼り付けるか、ダブルクリックしてファイル選択</p>
         <textarea id="csvInput" ondblclick="document.getElementById('fileHidden').click()" oninput="processData()" placeholder="年月日,名前,項目,内容&#10;の形式でCSVを貼り付け"></textarea>
         <input type="file" id="fileHidden" style="display:none" accept=".csv,.txt" onchange="handleFile(event)">
         
@@ -718,7 +712,7 @@ function renderHeaderSettings() {
                         <input 
                             type="checkbox" 
                             ${isChecked}
-                            onchange="ageShowFlags['${config.raw}'] = this.checked; renderView()"
+                            onchange="toggleAgeDisplay('${config.raw}')"
                         >
                         <label>年齢を計算して表示</label>
                     </div>
@@ -728,6 +722,11 @@ function renderHeaderSettings() {
         
         return html;
     }).join('');
+}
+
+function toggleAgeDisplay(itemName) {
+    ageShowFlags[itemName] = !ageShowFlags[itemName];
+    renderView();
 }
 
 // ===== Filtering & Grouping =====
