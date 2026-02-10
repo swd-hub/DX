@@ -12,7 +12,14 @@
             --text-main: #1e293b;
             --sidebar-width: 380px;
         }
-        body { font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; background-color: var(--bg); color: var(--text-main); margin: 0; overflow: hidden; display: flex; }
+        body { 
+            font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main); 
+            margin: 0; 
+            overflow: hidden; 
+            display: flex; 
+        }
 
         /* 操作パネル（ドロワー） */
         #sidebar {
@@ -59,6 +66,11 @@
             cursor: pointer;
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
 
         /* 巨大化したカード */
@@ -81,7 +93,12 @@
             margin-bottom: 40px;
             padding-bottom: 15px;
         }
-        .card-header h1 { font-size: 3rem; margin: 0; color: var(--text-main); letter-spacing: -0.02em; }
+        .card-header h1 { 
+            font-size: 3rem; 
+            margin: 0; 
+            color: var(--text-main); 
+            letter-spacing: -0.02em; 
+        }
         
         .card-body {
             flex: 1;
@@ -95,209 +112,756 @@
             border: 1px solid #f1f5f9;
             padding: 20px;
             border-radius: 16px;
-            transition: 0.2s;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
         }
-        .card-field:hover { border-color: var(--primary); background: #fff; }
-        .field-label { font-size: 0.85rem; color: var(--primary); font-weight: 800; margin-bottom: 10px; letter-spacing: 0.05em; }
-        .field-value { font-size: 1.3rem; line-height: 1.4; color: #1e293b; font-weight: 500; }
-        .field-date { font-size: 0.75rem; color: #94a3b8; margin-top: 10px; font-family: monospace; }
+        .card-field:hover { 
+            border-color: var(--primary); 
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+        }
+        .field-label { 
+            font-size: 0.85rem; 
+            color: var(--primary); 
+            font-weight: 800; 
+            margin-bottom: 10px; 
+            letter-spacing: 0.05em; 
+        }
+        .field-value { 
+            font-size: 1.3rem; 
+            line-height: 1.4; 
+            color: #1e293b; 
+            font-weight: 500; 
+            word-break: break-word;
+            flex-grow: 1;
+        }
+        .field-date { 
+            font-size: 1.1rem; 
+            color: #4f46e5;
+            margin-top: 12px; 
+            font-family: monospace;
+            font-weight: 600;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .field-age {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 4px;
+            font-weight: 500;
+        }
 
         /* ページ操作 */
-        .nav-controls { display: flex; align-items: center; gap: 40px; margin-top: 30px; }
-        .btn { padding: 15px 35px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: all 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4); }
+        .nav-controls { 
+            display: flex; 
+            align-items: center; 
+            gap: 40px; 
+            margin-top: 30px; 
+        }
+        .btn { 
+            padding: 15px 35px; 
+            border-radius: 12px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            transition: all 0.2s; 
+        }
+        .btn-primary { 
+            background: var(--primary); 
+            color: white; 
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4); 
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
         
         /* 設定項目 */
-        textarea { width: 100%; height: 120px; margin-bottom: 20px; border-radius: 12px; border: 2px dashed var(--border); padding: 15px; font-size: 0.85rem; }
-        .setting-section { margin-bottom: 30px; }
-        .setting-section h3 { font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 15px; }
+        textarea { 
+            width: 100%; 
+            height: 120px; 
+            margin-bottom: 20px; 
+            border-radius: 12px; 
+            border: 2px dashed var(--border); 
+            padding: 15px; 
+            font-size: 0.85rem;
+            font-family: monospace;
+            resize: vertical;
+            box-sizing: border-box;
+            user-select: text;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
 
-        @media print { .toggle-btn, #sidebar, .nav-controls { display: none !important; } .db-card { width: 100%; height: auto; box-shadow: none; border: 1px solid #000; } }
+        .setting-section { 
+            margin-bottom: 30px; 
+        }
+        .setting-section h3 { 
+            font-size: 0.9rem; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 5px; 
+            margin-bottom: 15px;
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        input[type="checkbox"] {
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        /* スクロールバー */
+        .card-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        .card-body::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .card-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .card-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 空状態メッセージ */
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* ===== チェックボックス設定項目スタイル ===== */
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .setting-item:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+        }
+
+        .setting-item input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .setting-item label {
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            font-weight: 500;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* ヘッダ設定のコンテナ */
+        #headerSettings {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .header-setting-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .header-setting-item:hover {
+            background: #f1f5f9;
+            border-color: var(--border);
+        }
+
+        .header-setting-item input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+        }
+
+        .header-setting-item input[type="text"] {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            box-sizing: border-box;
+        }
+
+        .header-setting-item input[type="text"]:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .birthdate-group {
+            margin-bottom: 16px;
+        }
+
+        .age-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            margin-bottom: 0;
+            background: #ffffff;
+            border: 1px solid #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .age-checkbox input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .age-checkbox label {
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            font-weight: 500;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .textarea-help {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin: 0 0 10px 0;
+        }
+
+        /* プリント対応 */
+        @media print { 
+            .toggle-btn, 
+            #sidebar, 
+            .nav-controls { 
+                display: none !important; 
+            } 
+            #main-content {
+                padding: 0;
+            }
+            .db-card { 
+                width: 100%; 
+                height: auto; 
+                max-width: 100%;
+                box-shadow: none; 
+                border: 1px solid #000;
+                page-break-inside: avoid;
+            }
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            :root {
+                --sidebar-width: 100%;
+            }
+            .db-card {
+                padding: 40px 30px;
+                height: auto;
+                min-height: 80vh;
+            }
+            .card-header h1 {
+                font-size: 2rem;
+            }
+            .card-body {
+                grid-template-columns: 1fr;
+            }
+            .nav-controls {
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
 
-<button class="toggle-btn" onclick="toggleSidebar()">☰ 設定パネル</button>
+<button class="toggle-btn" onclick="toggleSidebar()">☰ 設定</button>
 
 <div id="sidebar">
-    <h2 style="margin-top: 40px; font-size: 1.5rem;">Data Configuration</h2>
+    <h2 style="margin-top: 40px; font-size: 1.5rem; color: var(--text-main);">設定パネル</h2>
     
     <div class="setting-section">
-        <h3>1. データ読込</h3>
-        <p style="font-size: 0.75rem; color: #64748b;">CSV貼り付け or ダブルクリック選択</p>
-        <textarea id="csvInput" ondblclick="document.getElementById('fileHidden').click()" oninput="processData()" placeholder="ここにCSVデータを貼り付け"></textarea>
-        <input type="file" id="fileHidden" style="display:none" accept=".csv" onchange="handleFile(event)">
+        <h3>1️⃣ データ読込</h3>
+        <p class="textarea-help">CSVを貼り付けるか、ダブルクリックしてファイル選択</p>
+        <textarea id="csvInput" ondblclick="document.getElementById('fileHidden').click()" oninput="processData()" placeholder="年月日,名前,項目,内容&#10;の形式でCSVを貼り付け"></textarea>
+        <input type="file" id="fileHidden" style="display:none" accept=".csv,.txt" onchange="handleFile(event)">
         
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; color: var(--primary); font-weight: bold;">
-            <input type="checkbox" id="enableDedup" checked onchange="processData()"> 各項目の最終更新日データのみ抽出
-        </label>
+        <div class="setting-item">
+            <input type="checkbox" id="enableDedup" checked onchange="processData()">
+            <label for="enableDedup">各項目の最終更新日データのみ抽出</label>
+        </div>
     </div>
     
     <div class="setting-section">
-        <h3>2. 絞り込み条件</h3>
-        <input type="text" id="globalSearch" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px;" placeholder="名前(主キー)を検索..." oninput="renderView()">
-        <p style="font-size: 0.75rem; margin-bottom:5px;">基準日以降の記録がある対象のみ表示:</p>
-        <input type="date" id="dateFilter" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px;" onchange="renderView()">
+        <h3>2️⃣ 絞り込み条件</h3>
+        <input type="text" id="globalSearch" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;" placeholder="名前を検索..." oninput="renderView()">
+        <p style="font-size: 0.75rem; margin: 10px 0 5px 0; color: #64748b;">基準日以降の記録がある対象のみ表示:</p>
+        <input type="date" id="dateFilter" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;" onchange="renderView()">
     </div>
 
     <div class="setting-section">
-        <h3>3. 表示項目の表示名設定</h3>
+        <h3>3️⃣ 表示項目の設定</h3>
         <div id="headerSettings"></div>
+    </div>
+
+    <div class="setting-section" style="border-top: 2px solid var(--border); padding-top: 20px;">
+        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">
+            <strong id="statsRecords">0</strong> 件のレコード読込済み<br>
+            <strong id="statsPeople">0</strong> 名の人物<br>
+            <strong id="statsItems">0</strong> 個の項目
+        </p>
     </div>
 </div>
 
 <div id="main-content">
-    <div id="cardView" style="width: 100%; display: flex; justify-content: center;"></div>
+    <div id="cardView" style="width: 100%; display: flex; justify-content: center; align-items: center;">
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>CSVデータを読み込んでください</p>
+        </div>
+    </div>
 
     <div class="nav-controls">
         <button class="btn btn-primary" onclick="changePage(-1)">◀ PREV</button>
-        <span id="pageInfo" style="font-size: 1.5rem; font-weight: 800; font-family: 'Courier New', Courier, monospace;">0 / 0</span>
+        <span id="pageInfo" style="font-size: 1.5rem; font-weight: 800; font-family: 'Courier New', Courier, monospace; min-width: 100px; text-align: center;">0 / 0</span>
         <button class="btn btn-primary" onclick="changePage(1)">NEXT ▶</button>
     </div>
 </div>
 
 <script>
+// ===== State Management =====
 let rawRecords = [];
 let headerConfigs = [];
 let currentIndex = 0;
+let filteredPeople = [];
+let ageShowFlags = {}; // 項目ごとの年齢表示フラグを管理
 
+// 特別な項目キー（生年月日判定用）
+const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth'];
+
+// ===== UI Control =====
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
+    if (document.getElementById('sidebar').classList.contains('open')) {
+        document.addEventListener('click', closeSidebarOnClickOutside);
+    } else {
+        document.removeEventListener('click', closeSidebarOnClickOutside);
+    }
 }
 
+function closeSidebarOnClickOutside(e) {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.querySelector('.toggle-btn');
+    if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+        sidebar.classList.remove('open');
+        document.removeEventListener('click', closeSidebarOnClickOutside);
+    }
+}
+
+// ===== File Handling =====
 function handleFile(e) {
     const file = e.target.files[0];
     if (!file) return;
+    
     const reader = new FileReader();
     reader.onload = (event) => {
         document.getElementById('csvInput').value = event.target.result;
         processData();
     };
-    reader.readAsText(file);
+    reader.onerror = () => {
+        alert('ファイル読込に失敗しました');
+    };
+    reader.readAsText(file, 'UTF-8');
 }
 
+// ===== Date & Age Calculation =====
+function parseDate(dateStr) {
+    const wareki = {
+        'S': 1926, 'H': 1989, 'R': 2019
+    };
+    
+    let normalized = dateStr.trim();
+    
+    // 和暦パターン
+    const warekiMatch = normalized.match(/^([SHR])(\d+)\.(\d+)\.(\d+)$/);
+    if (warekiMatch) {
+        const [, era, year, month, day] = warekiMatch;
+        const baseYear = wareki[era];
+        const yyyy = baseYear + parseInt(year);
+        normalized = `${yyyy}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    normalized = normalized.replace(/\//g, '-');
+    
+    const date = new Date(normalized);
+    return {
+        str: normalized,
+        ts: isNaN(date.getTime()) ? 0 : date.getTime(),
+        valid: !isNaN(date.getTime()),
+        date: date
+    };
+}
+
+function calculateAge(birthDateStr) {
+    const birthDate = parseDate(birthDateStr);
+    
+    if (!birthDate.valid) {
+        return null;
+    }
+    
+    const today = new Date();
+    const birth = birthDate.date;
+    
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    
+    return age >= 0 ? age : null;
+}
+
+function isBirthdateField(itemName) {
+    const lower = itemName.toLowerCase();
+    return BIRTHDATE_KEYWORDS.some(keyword => lower.includes(keyword));
+}
+
+// ===== Data Processing =====
 function processData() {
     const text = document.getElementById('csvInput').value.trim();
-    if (!text) return;
+    if (!text) {
+        rawRecords = [];
+        headerConfigs = [];
+        ageShowFlags = {};
+        updateStats();
+        renderView();
+        return;
+    }
     
-    // 全行パース & 日付で降順ソート（新しい日付を配列の前方へ）
     const allParsed = text.split('\n')
-        .filter(l => l.trim() !== "")
+        .filter(l => l.trim() !== '' && !l.trim().startsWith('#'))
         .map(line => {
-            const cols = line.split(/,|\t/).map(s => s.trim().replace(/^"|"$/g, ''));
+            const cols = line.split(/,/).map(s => s.trim().replace(/^"|"$/g, ''));
+            const dateInfo = parseDate(cols[0]);
+            
             return {
-                date: cols[0].replace(/-/g, '/'),
-                name: cols[1],
-                item: cols[2],
-                content: cols[3],
-                ts: new Date(cols[0].replace(/-/g, '/')).getTime()
+                dateStr: dateInfo.str,
+                ts: dateInfo.ts,
+                valid: dateInfo.valid,
+                name: cols[1] || '',
+                item: cols[2] || '',
+                content: cols[3] || ''
             };
         })
-        .filter(r => !isNaN(r.ts))
-        .sort((a, b) => b.ts - a.ts); 
+        .filter(r => r.valid && r.name && r.item)
+        .sort((a, b) => b.ts - a.ts);
 
     const isFinalOnly = document.getElementById('enableDedup').checked;
-    const itemSet = new Set();
-
+    const allItems = new Set();
+    
     if (isFinalOnly) {
-        // 同じ「氏名＋項目」の組み合わせで、最初に出現したもの（＝最新日付）のみ保持
-        const map = new Map();
+        const seen = new Map();
+        rawRecords = [];
+        
         allParsed.forEach(r => {
             const key = `${r.name}|${r.item}`;
-            if (!map.has(key)) map.set(key, r);
-            itemSet.add(r.item);
+            if (!seen.has(key)) {
+                seen.set(key, r);
+                rawRecords.push(r);
+            }
+            allItems.add(r.item);
         });
-        rawRecords = Array.from(map.values());
     } else {
-        allParsed.forEach(r => itemSet.add(r.item));
         rawRecords = allParsed;
+        allParsed.forEach(r => allItems.add(r.item));
     }
 
-    if (headerConfigs.length === 0) {
-        headerConfigs = Array.from(itemSet).map((item, i) => ({
-            raw: item, alias: item, active: true
-        }));
+    if (headerConfigs.length === 0 || headerConfigs.length !== allItems.size) {
+        headerConfigs = Array.from(allItems)
+            .sort()
+            .map(item => ({
+                raw: item,
+                alias: item,
+                active: true
+            }));
+        
+        // 生年月日フィールドのみ年齢表示フラグを初期化
+        ageShowFlags = {};
+        Array.from(allItems).forEach(item => {
+            if (isBirthdateField(item)) {
+                ageShowFlags[item] = true; // デフォルトでON
+            }
+        });
     }
+
+    currentIndex = 0;
+    updateStats();
     renderHeaderSettings();
     renderView();
 }
 
-function renderHeaderSettings() {
-    const container = document.getElementById('headerSettings');
-    container.innerHTML = headerConfigs.map((config, i) => `
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; background:#f8fafc; padding:8px; border-radius:8px;">
-            <input type="checkbox" ${config.active?'checked':''} onchange="headerConfigs[${i}].active=this.checked; renderView()">
-            <input type="text" value="${config.alias}" style="flex:1; padding:4px; border:1px solid #ddd; border-radius:4px;" oninput="headerConfigs[${i}].alias=this.value; renderView()">
-        </div>
-    `).join('');
+function updateStats() {
+    const uniquePeople = new Set(rawRecords.map(r => r.name));
+    const uniqueItems = new Set(rawRecords.map(r => r.item));
+    
+    document.getElementById('statsRecords').textContent = rawRecords.length;
+    document.getElementById('statsPeople').textContent = uniquePeople.size;
+    document.getElementById('statsItems').textContent = uniqueItems.size;
 }
 
-function getFilteredData() {
+function renderHeaderSettings() {
+    const container = document.getElementById('headerSettings');
+    
+    if (headerConfigs.length === 0) {
+        container.innerHTML = '<p style="color: #94a3b8; font-size: 0.85rem;">まずデータを読み込んでください</p>';
+        return;
+    }
+
+    container.innerHTML = headerConfigs.map((config, i) => {
+        let html = `
+            <div class="header-setting-item">
+                <input 
+                    type="checkbox" 
+                    ${config.active ? 'checked' : ''} 
+                    onchange="headerConfigs[${i}].active = this.checked; renderView()"
+                >
+                <input 
+                    type="text" 
+                    value="${escapeHtml(config.alias)}" 
+                    oninput="headerConfigs[${i}].alias = this.value; renderView()"
+                >
+            </div>
+        `;
+        
+        // 生年月日フィールドの場合、年齢表示チェックボックスを追加
+        if (isBirthdateField(config.raw)) {
+            const isChecked = ageShowFlags[config.raw] ? 'checked' : '';
+            html = `
+                <div class="birthdate-group">
+                    <div class="header-setting-item">
+                        <input 
+                            type="checkbox" 
+                            ${config.active ? 'checked' : ''} 
+                            onchange="headerConfigs[${i}].active = this.checked; renderView()"
+                        >
+                        <input 
+                            type="text" 
+                            value="${escapeHtml(config.alias)}" 
+                            oninput="headerConfigs[${i}].alias = this.value; renderView()"
+                        >
+                    </div>
+                    <div class="age-checkbox">
+                        <input 
+                            type="checkbox" 
+                            ${isChecked}
+                            onchange="ageShowFlags['${config.raw}'] = this.checked; renderView()"
+                        >
+                        <label>年齢を計算して表示</label>
+                    </div>
+                </div>
+            `;
+        }
+        
+        return html;
+    }).join('');
+}
+
+// ===== Filtering & Grouping =====
+function getFilteredPeople() {
     const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
     const dateLimit = document.getElementById('dateFilter').value;
     const dateLimitTs = dateLimit ? new Date(dateLimit).getTime() : 0;
 
     const grouped = {};
-    rawRecords.forEach(r => {
-        if (!grouped[r.name]) grouped[r.name] = { name: r.name, items: {}, maxTs: 0 };
-        // 重複排除オフの場合は、同じ項目でも「より新しい日付」を優先してカードに表示
-        if (!grouped[r.name].items[r.item] || r.ts > grouped[r.name].items[r.item].ts) {
-            grouped[r.name].items[r.item] = r;
+    rawRecords.forEach(record => {
+        if (!grouped[record.name]) {
+            grouped[record.name] = {
+                name: record.name,
+                records: {},
+                maxTs: 0
+            };
         }
-        if (r.ts > grouped[r.name].maxTs) grouped[r.name].maxTs = r.ts;
+
+        const key = record.item;
+        if (!grouped[record.name].records[key] || record.ts > grouped[record.name].records[key].ts) {
+            grouped[record.name].records[key] = record;
+        }
+
+        if (record.ts > grouped[record.name].maxTs) {
+            grouped[record.name].maxTs = record.ts;
+        }
     });
 
-    return Object.values(grouped).filter(person => {
-        return person.name.toLowerCase().includes(searchTerm) && person.maxTs >= dateLimitTs;
-    }).sort((a, b) => b.maxTs - a.maxTs);
+    return Object.values(grouped)
+        .filter(person => {
+            const matchesSearch = person.name.toLowerCase().includes(searchTerm);
+            const matchesDate = person.maxTs >= dateLimitTs;
+            return matchesSearch && matchesDate;
+        })
+        .sort((a, b) => b.maxTs - a.maxTs);
 }
 
+// ===== Rendering =====
 function renderView() {
-    const filtered = getFilteredData();
+    filteredPeople = getFilteredPeople();
     const container = document.getElementById('cardView');
     const pageInfo = document.getElementById('pageInfo');
 
-    if (filtered.length === 0) {
-        container.innerHTML = "<div style='color:#94a3b8;'>条件に合致するデータがありません。設定パネルでCSVを読み込んでください。</div>";
-        pageInfo.innerText = "0 / 0";
+    if (filteredPeople.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <p>条件に合致するデータがありません</p>
+            </div>
+        `;
+        pageInfo.textContent = '0 / 0';
         return;
     }
 
-    if (currentIndex >= filtered.length) currentIndex = 0;
-    const person = filtered[currentIndex];
+    if (currentIndex >= filteredPeople.length) {
+        currentIndex = 0;
+    }
 
-    let fieldsHtml = headerConfigs.filter(c => c.active).map(config => {
-        const record = person.items[config.raw];
+    const person = filteredPeople[currentIndex];
+    renderCard(person, container);
+    pageInfo.textContent = `${currentIndex + 1} / ${filteredPeople.length}`;
+}
+
+function renderCard(person, container) {
+    const activeConfigs = headerConfigs.filter(c => c.active);
+    
+    const fieldsHtml = activeConfigs.map(config => {
+        const record = person.records[config.raw];
+        const displayValue = record ? record.content : '-';
+        const displayDate = record ? record.dateStr : 'N/A';
+        
+        // 生年月日フィールドで年齢表示が有効な場合
+        let ageHtml = '';
+        if (ageShowFlags[config.raw] && isBirthdateField(config.raw) && record && record.content) {
+            const age = calculateAge(record.content);
+            if (age !== null) {
+                ageHtml = `<div class="field-age">年齢: ${age}才</div>`;
+            }
+        }
+        
         return `
             <div class="card-field">
-                <div class="field-label">${config.alias}</div>
-                <div class="field-value">${record ? record.content : "-"}</div>
-                <div class="field-date">📅最終確認: ${record ? record.date : "記録なし"}</div>
+                <div class="field-label">${escapeHtml(config.alias)}</div>
+                <div class="field-value">${escapeHtml(displayValue)}</div>
+                <div class="field-date">📅 ${escapeHtml(displayDate)}</div>
+                ${ageHtml}
             </div>
         `;
     }).join('');
 
+    const emptyMessage = activeConfigs.length === 0 
+        ? '<div class="empty-state"><p>表示する項目を選択してください</p></div>'
+        : '';
+
     container.innerHTML = `
         <div class="db-card">
             <div class="card-header">
-                <div style="font-size:0.9rem; color:var(--primary); font-weight:800;">SUBJECT / PRIMARY KEY</div>
-                <h1>${person.name}</h1>
+                <div style="font-size:0.9rem; color:var(--primary); font-weight:800;">PRIMARY KEY</div>
+                <h1>${escapeHtml(person.name)}</h1>
             </div>
             <div class="card-body">
-                ${fieldsHtml}
+                ${fieldsHtml || emptyMessage}
             </div>
         </div>
     `;
-    pageInfo.innerText = `${currentIndex + 1} / ${filtered.length}`;
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== Navigation =====
 function changePage(step) {
-    const filtered = getFilteredData();
-    if (filtered.length === 0) return;
-    currentIndex = (currentIndex + step + filtered.length) % filtered.length;
+    if (filteredPeople.length === 0) return;
+    
+    currentIndex = (currentIndex + step + filteredPeople.length) % filteredPeople.length;
     renderView();
 }
+
+// キーボード操作
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') changePage(-1);
+    if (e.key === 'ArrowRight') changePage(1);
+});
+
+// 初期化
+window.addEventListener('load', () => {
+    updateStats();
+    renderHeaderSettings();
+    renderView();
+});
 </script>
+
 </body>
 </html>
