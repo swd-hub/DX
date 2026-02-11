@@ -389,7 +389,6 @@
             }
 
             @page {
-                size: A4 landscape;
                 margin: 15mm;
             }
 
@@ -522,6 +521,14 @@
                             oninput="changeFontSize(this.value)">
                         <span class="font-size-display" id="fontSizeDisplay">0.9rem</span>
                     </div>
+                    <div class="font-size-control">
+                        <label>印刷方向:</label>
+                        <label style="font-weight: normal; cursor: pointer; margin-left: 5px;"><input type="radio"
+                                name="print_orient" value="portrait" onchange="changeOrientation('portrait')"> 縦</label>
+                        <label style="font-weight: normal; cursor: pointer; margin-left: 5px;"><input type="radio"
+                                name="print_orient" value="landscape" checked onchange="changeOrientation('landscape')">
+                            横</label>
+                    </div>
                 </div>
             </div>
         </div><!-- /#panelArea -->
@@ -558,6 +565,7 @@
         let stats = { total: 0, fullDup: 0, unique: 0 };
         let columnWidths = {};
         let currentFontSize = 0.9;
+        let printOrientation = 'landscape';
         let draggedColIndex = null;
         let panelVisible = true;
 
@@ -608,6 +616,7 @@
                     latestDateLimit: document.getElementById('latestDateLimit').value,
                     enableDedup: document.getElementById('enableDedup').checked,
                     currentFontSize,
+                    printOrientation,
                     headerConfigs,
                     columnWidths
                 };
@@ -632,6 +641,11 @@
                         currentFontSize = state.currentFontSize;
                         document.getElementById('fontSizeSlider').value = currentFontSize;
                         document.getElementById('fontSizeDisplay').textContent = currentFontSize + 'rem';
+                    }
+                    if (state.printOrientation) {
+                        printOrientation = state.printOrientation;
+                        const radios = document.getElementsByName('print_orient');
+                        radios.forEach(r => { if (r.value === printOrientation) r.checked = true; });
                     }
                     if (state.headerConfigs && state.headerConfigs.length) headerConfigs = state.headerConfigs;
                     if (state.columnWidths && Object.keys(state.columnWidths).length) columnWidths = state.columnWidths;
@@ -714,6 +728,12 @@
                 el.style.fontSize = currentFontSize + 'rem';
             });
 
+            generatePrintStyles();
+            scheduleSaveIDB();
+        }
+
+        function changeOrientation(orient) {
+            printOrientation = orient;
             generatePrintStyles();
             scheduleSaveIDB();
         }
@@ -979,13 +999,29 @@
             return { headers: activeConfigs.map(c => c.displayName), rows, configIndices: activeConfigs.map(c => headerConfigs.indexOf(c)) };
         }
 
-        function generatePrintStyles() {
-            let styles = '@media print {\n';
-            Object.keys(columnWidths).forEach(colIndex => {
-                const width = columnWidths[colIndex];
-                styles += `  table th:nth-child(${parseInt(colIndex) + 1}), table td:nth-child(${parseInt(colIndex) + 1}) { width: ${width}px !important; max-width: ${width}px !important; }\n`;
+        function generatePrintStyles(configIndices) {
+            if (!configIndices) {
+                const data = getTableData();
+                configIndices = data.configIndices;
+            }
+
+            let styles = `@page { size: A4 ${printOrientation}; }\n`;
+            styles += '@media print {\n';
+
+            let totalSetWidth = 0;
+            configIndices.forEach(idx => {
+                totalSetWidth += columnWidths[idx] || 150;
             });
-            styles += `  table th, table td { font-size: ${currentFontSize}rem !important; }\n`;
+
+            configIndices.forEach((globalIndex, i) => {
+                const width = columnWidths[globalIndex] || 150;
+                const percent = (width / totalSetWidth) * 100;
+                styles += `  table th:nth-child(${i + 1}), table td:nth-child(${i + 1}) { width: ${percent}% !important; box-sizing: border-box !important; }\n`;
+            });
+
+            styles += '  .table-wrapper { overflow: visible !important; }\n';
+            styles += '  table { table-layout: fixed; width: 100% !important; min-width: 0 !important; max-width: 100% !important; border-collapse: collapse !important; }\n';
+            styles += `  table th, table td { font-size: ${currentFontSize}rem !important; word-break: break-all; word-wrap: break-word; overflow-wrap: break-word; }\n`;
             styles += '}';
             document.getElementById('printStyles').innerText = styles;
         }
@@ -1027,7 +1063,7 @@
             document.getElementById('statUnique').innerText = stats.unique;
             document.getElementById('statTableDim').innerText = `${rows.length}件 × ${headers.length}項目`;
 
-            generatePrintStyles();
+            generatePrintStyles(configIndices);
             scheduleSaveIDB();
         }
 
