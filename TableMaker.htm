@@ -166,11 +166,15 @@
 </head>
 <body>
 <h1 style="text-align: center; color: #4f46e5; margin-bottom: 30px;">
-    📊 資料作成ツール（ＤＸ準拠）
+    📊 資料作成ツール（DX推進）
 </h1>
 
 <div class="container">
-
+    <div class="card no-print" style="margin-bottom: 10px; padding: 12px;" id="toggleBar">
+        <button type="button" class="btn btn-primary" id="togglePanelBtn" onclick="togglePanelVisibility()">▼ 操作パネルを非表示</button>
+        <button type="button" class="btn btn-sm" style="background: #64748b; color: white; margin-left: 8px;" onclick="clearIndexedDB()" title="保存したデータを削除">🗑 IndexedDBクリア</button>
+    </div>
+    <div id="panelArea">
     <div class="card no-print">
         <h3>1. データの読み込み</h3>
         <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">枠内を<strong>「2回トントン（ダブルクリック）」</strong>してファイルを選ぶか、貼り付けてください。</p>
@@ -232,23 +236,21 @@
         </div>
 
         <div id="headerSettings" class="config-grid"></div>
-    </div>
-
-    <div class="card">
-        <div class="btn-group no-print">
+        <div class="btn-group no-print" style="margin-bottom: 15px;">
             <button class="btn btn-info" onclick="toggleTextPreview('csv')">CSVの中身を確認</button>
             <button class="btn btn-success" onclick="exportCSV()">CSV保存</button>
             <button class="btn btn-warning" onclick="exportJSON()">JSON保存</button>
             <button class="btn btn-primary" onclick="window.print()">印刷 / PDF出力</button>
-            
             <div class="font-size-control">
                 <label for="fontSizeSlider">フォント:</label>
-                <input type="range" id="fontSizeSlider" min="0.7" max="1.3" step="0.05" value="0.9" 
-                       oninput="changeFontSize(this.value)">
+                <input type="range" id="fontSizeSlider" min="0.7" max="1.3" step="0.05" value="0.9" oninput="changeFontSize(this.value)">
                 <span class="font-size-display" id="fontSizeDisplay">0.9rem</span>
             </div>
         </div>
+    </div>
+    </div><!-- /#panelArea -->
 
+    <div class="card">
         <div id="dataTextPreview" class="data-text-preview no-print">
             <strong id="previewType"></strong>の中身：
             <textarea id="dataTextOutput" readonly></textarea>
@@ -264,16 +266,31 @@
 <style id="printStyles"></style>
 
 <script>
+const IDB_NAME = 'TableMakerDX';
+const IDB_STORE = 'state';
+const IDB_KEY = 'app';
+
 let rawRecords = []; 
 let headerConfigs = [];
 let stats = { total: 0, fullDup: 0, unique: 0 };
 let columnWidths = {};
 let currentFontSize = 0.9;
 let draggedColIndex = null;
+let panelVisible = true;
 
-// ============================================
-// ✅ デフォルト日付を設定（1年以上前の04/01）
-// ============================================
+function togglePanelVisibility() {
+    panelVisible = !panelVisible;
+    const el = document.getElementById('panelArea');
+    const btn = document.getElementById('togglePanelBtn');
+    if (panelVisible) {
+        el.style.display = '';
+        btn.textContent = '▼ 操作パネルを非表示';
+    } else {
+        el.style.display = 'none';
+        btn.textContent = '▶ 操作パネルを表示';
+    }
+}
+
 function initializeDefaultDateLimit() {
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -291,9 +308,84 @@ function initializeDefaultDateLimit() {
     document.getElementById('latestDateLimit').value = defaultDate;
 }
 
-// ページロード時に実行
+function openIDB() {
+    return new Promise((resolve, reject) => {
+        const r = indexedDB.open(IDB_NAME, 1);
+        r.onerror = () => reject(r.error);
+        r.onsuccess = () => resolve(r.result);
+        r.onupgradeneeded = (e) => { e.target.result.createObjectStore(IDB_STORE); };
+    });
+}
+
+function saveToIndexedDB() {
+    openIDB().then(db => {
+        const state = {
+            csvInput: document.getElementById('csvInput').value,
+            tableTitle: document.getElementById('tableTitle').value,
+            latestDateLimit: document.getElementById('latestDateLimit').value,
+            enableDedup: document.getElementById('enableDedup').checked,
+            currentFontSize,
+            headerConfigs,
+            columnWidths
+        };
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(state, IDB_KEY);
+        db.close();
+    }).catch(() => {});
+}
+
+function loadFromIndexedDB() {
+    openIDB().then(db => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+        req.onsuccess = () => {
+            const state = req.result;
+            if (!state) { db.close(); return; }
+            document.getElementById('csvInput').value = state.csvInput || '';
+            document.getElementById('tableTitle').value = state.tableTitle || '';
+            if (state.latestDateLimit) document.getElementById('latestDateLimit').value = state.latestDateLimit;
+            if (typeof state.enableDedup === 'boolean') document.getElementById('enableDedup').checked = state.enableDedup;
+            if (state.currentFontSize) {
+                currentFontSize = state.currentFontSize;
+                document.getElementById('fontSizeSlider').value = currentFontSize;
+                document.getElementById('fontSizeDisplay').textContent = currentFontSize + 'rem';
+            }
+            if (state.headerConfigs && state.headerConfigs.length) headerConfigs = state.headerConfigs;
+            if (state.columnWidths && Object.keys(state.columnWidths).length) columnWidths = state.columnWidths;
+            if (document.getElementById('csvInput').value.trim()) processData();
+            else {
+                renderHeaderConfigUI();
+                if (headerConfigs.length) document.getElementById('configSection').style.display = 'block';
+                renderTable();
+            }
+            db.close();
+        };
+        req.onerror = () => db.close();
+    }).catch(() => {});
+}
+
+function clearIndexedDB() {
+    if (!confirm('IndexedDBに保存したデータをすべて削除しますか？')) return;
+    openIDB().then(db => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(IDB_KEY);
+        tx.oncomplete = () => {
+            db.close();
+            alert('IndexedDBをクリアしました。');
+            location.reload();
+        };
+    }).catch(() => alert('クリアに失敗しました。'));
+}
+
+let saveIDBTimeout;
+function scheduleSaveIDB() {
+    clearTimeout(saveIDBTimeout);
+    saveIDBTimeout = setTimeout(saveToIndexedDB, 500);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeDefaultDateLimit();
+    loadFromIndexedDB();
 });
 
 // 和暦（R, H, S）を西暦に変換する関数
@@ -340,6 +432,7 @@ function changeFontSize(size) {
     });
 
     generatePrintStyles();
+    scheduleSaveIDB();
 }
 
 function handleFile(e) {
@@ -360,9 +453,6 @@ function processData() {
     const lines = text.split('\n').filter(l => l.trim() !== "");
     stats.total = lines.length;
     
-    // ============================================
-    // ステップ1：完全重複排除（無条件に1件だけ残す）
-    // ============================================
     const uniqueLines = [...new Set(lines)];
     stats.fullDup = stats.total - uniqueLines.length;
 
@@ -388,9 +478,6 @@ function processData() {
         });
     });
 
-    // ============================================
-    // ステップ2：年月日が異なり「名前・項目・内容」が同じ場合の処理
-    // ============================================
     const map = new Map();
 
     tempRecords.forEach(r => {
@@ -403,7 +490,6 @@ function processData() {
             const existing = map.get(key);
             
             if (isDedup) {
-                // ✅ ON（デフォルト）：最も古い日付のみ残す
                 if (r.ts < existing.ts) {
                     map.set(key, r);
                 }
@@ -414,7 +500,6 @@ function processData() {
     if (isDedup) {
         rawRecords = Array.from(map.values());
     } else {
-        // チェック OFF：すべてのレコードをそのまま保持
         rawRecords = tempRecords;
     }
     
@@ -460,6 +545,7 @@ function processData() {
 
     renderHeaderConfigUI();
     renderTable();
+    scheduleSaveIDB();
 }
 
 function updateRawJsonPreview() {
@@ -544,6 +630,7 @@ function importConfigFromFile(event) {
                 headerConfigs = configData;
                 renderHeaderConfigUI();
                 renderTable();
+                scheduleSaveIDB();
                 alert('✅ 設定ファイルを読み込みました！');
             } else {
                 alert('❌ ファイル形式が正しくありません。');
@@ -561,6 +648,7 @@ function resetConfig() {
         headerConfigs = [];
         columnWidths = {};
         document.getElementById('headerSettings').innerHTML = '';
+        scheduleSaveIDB();
         alert('✅ 設定をリセットしました！');
     }
 }
@@ -654,6 +742,7 @@ function renderTable() {
     document.getElementById('statTableDim').innerText = `${rows.length}件 × ${headers.length}項目`;
 
     generatePrintStyles();
+    scheduleSaveIDB();
 }
 
 // --- ドラッグ＆ドロップ制御関数 ---
