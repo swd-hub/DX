@@ -499,8 +499,12 @@
         <div class="setting-section">
             <h3>1️⃣ indexDATABASE</h3>
             <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 10px 0;">CSVを貼り付けるか、ダブルクリックでファイル選択</p>
-            <label for="indexDATABASE"
-                style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">indexDATABASE</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <label for="indexDATABASE"
+                    style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin:0;">indexDATABASE</label>
+                <button type="button" onclick="clearData()"
+                    style="font-size:0.7rem; padding:4px 8px; border:1px solid var(--border); background:#fff; border-radius:4px; cursor:pointer; color:#64748b;">クリア</button>
+            </div>
             <textarea id="indexDATABASE" ondblclick="document.getElementById('fileHidden').click()"
                 oninput="processData()" placeholder="年月日,名前,項目,内容&#10;の形式でCSVを貼り付け"></textarea>
             <input type="file" id="fileHidden" style="display:none" accept=".csv,.txt" onchange="handleFile(event)">
@@ -1022,6 +1026,22 @@
             // Load persisted data
             loadDataFromDB();
         });
+
+        async function clearData() {
+            if (!confirm('データを全て削除しますか？')) return;
+            document.getElementById('indexDATABASE').value = '';
+            processData(); // This will reset internal state and view
+
+            // Clear IndexedDB
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(DATA_KEY);
+            } catch (e) {
+                console.error('Failed to clear data:', e);
+            }
+        }
     </script>
 
 </body>
