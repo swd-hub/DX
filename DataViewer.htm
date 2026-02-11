@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <title>Data Viewer - Card Database</title>
@@ -12,13 +13,14 @@
             --text-main: #1e293b;
             --sidebar-width: 380px;
         }
-        body { 
-            font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text-main); 
-            margin: 0; 
-            overflow: hidden; 
-            display: flex; 
+
+        body {
+            font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            overflow: hidden;
+            display: flex;
         }
 
         /* 操作パネル（ドロワー） */
@@ -35,9 +37,12 @@
             padding: 30px 20px;
             box-sizing: border-box;
             overflow-y: auto;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
         }
-        #sidebar.open { transform: translateX(var(--sidebar-width)); }
+
+        #sidebar.open {
+            transform: translateX(var(--sidebar-width));
+        }
 
         /* メインエリア */
         #main-content {
@@ -65,12 +70,13 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: all 0.2s;
         }
+
         .toggle-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
         /* 巨大化したカード */
@@ -81,7 +87,7 @@
             height: 85vh;
             padding: 60px;
             border-radius: 32px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
             border-top: 15px solid var(--primary);
             display: flex;
             flex-direction: column;
@@ -93,13 +99,14 @@
             margin-bottom: 40px;
             padding-bottom: 15px;
         }
-        .card-header h1 { 
-            font-size: 3rem; 
-            margin: 0; 
-            color: var(--text-main); 
-            letter-spacing: -0.02em; 
+
+        .card-header h1 {
+            font-size: 3rem;
+            margin: 0;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
         }
-        
+
         .card-body {
             flex: 1;
             overflow-y: auto;
@@ -107,6 +114,7 @@
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 25px;
         }
+
         .card-field {
             background: #fdfdfd;
             border: 1px solid #f1f5f9;
@@ -116,35 +124,56 @@
             display: flex;
             flex-direction: column;
         }
-        .card-field:hover { 
-            border-color: var(--primary); 
+
+        .card-field:hover {
+            border-color: var(--primary);
             background: #fff;
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
         }
-        .field-label { 
-            font-size: 0.85rem; 
-            color: var(--primary); 
-            font-weight: 800; 
-            margin-bottom: 10px; 
-            letter-spacing: 0.05em; 
+
+        .card-field.dragging {
+            opacity: 0.6;
         }
-        .field-value { 
-            font-size: 1.3rem; 
-            line-height: 1.4; 
-            color: #1e293b; 
-            font-weight: 500; 
+
+        .card-field .card-field-handle {
+            cursor: grab;
+            color: #94a3b8;
+            font-size: 1rem;
+            user-select: none;
+            margin-bottom: 8px;
+        }
+
+        .card-field .card-field-handle:active {
+            cursor: grabbing;
+        }
+
+        .field-label {
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 800;
+            margin-bottom: 10px;
+            letter-spacing: 0.05em;
+        }
+
+        .field-value {
+            font-size: 1.3rem;
+            line-height: 1.4;
+            color: #1e293b;
+            font-weight: 500;
             word-break: break-word;
             flex-grow: 1;
         }
-        .field-date { 
-            font-size: 1.1rem; 
+
+        .field-date {
+            font-size: 1.1rem;
             color: #4f46e5;
-            margin-top: 12px; 
+            margin-top: 12px;
             font-family: monospace;
             font-weight: 600;
             padding-top: 12px;
             border-top: 1px solid #e2e8f0;
         }
+
         .field-age {
             font-size: 0.9rem;
             color: #64748b;
@@ -153,60 +182,76 @@
         }
 
         /* ページ操作 */
-        .nav-controls { 
-            display: flex; 
-            align-items: center; 
-            gap: 40px; 
-            margin-top: 30px; 
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            margin-top: 30px;
         }
-        .btn { 
-            padding: 15px 35px; 
-            border-radius: 12px; 
-            border: none; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 1.1rem; 
-            transition: all 0.2s; 
+
+        .btn {
+            padding: 15px 35px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.2s;
         }
-        .btn-primary { 
-            background: var(--primary); 
-            color: white; 
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
         }
-        .btn-primary:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4); 
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
         }
+
         .btn-primary:active {
             transform: translateY(0);
         }
-        
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: rgba(79, 70, 229, 0.08);
+        }
+
         /* 設定項目 */
-        textarea { 
-            width: 100%; 
-            height: 120px; 
-            margin-bottom: 20px; 
-            border-radius: 12px; 
-            border: 2px dashed var(--border); 
-            padding: 15px; 
+        textarea {
+            width: 100%;
+            height: 120px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+            padding: 15px;
             font-size: 0.85rem;
             font-family: monospace;
             resize: vertical;
             box-sizing: border-box;
             user-select: text;
         }
+
         textarea:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
-        .setting-section { 
-            margin-bottom: 30px; 
+        .setting-section {
+            margin-bottom: 30px;
         }
-        .setting-section h3 { 
-            font-size: 0.9rem; 
-            border-bottom: 1px solid var(--border); 
-            padding-bottom: 5px; 
+
+        .setting-section h3 {
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
             margin-bottom: 15px;
             color: var(--primary);
             font-weight: 800;
@@ -238,14 +283,17 @@
         .card-body::-webkit-scrollbar {
             width: 8px;
         }
+
         .card-body::-webkit-scrollbar-track {
             background: #f1f5f9;
             border-radius: 4px;
         }
+
         .card-body::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
+
         .card-body::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
@@ -253,13 +301,16 @@
         #sidebar::-webkit-scrollbar {
             width: 6px;
         }
+
         #sidebar::-webkit-scrollbar-track {
             background: transparent;
         }
+
         #sidebar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 3px;
         }
+
         #sidebar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
@@ -387,20 +438,23 @@
         }
 
         /* プリント対応 */
-        @media print { 
-            .toggle-btn, 
-            #sidebar, 
-            .nav-controls { 
-                display: none !important; 
-            } 
+        @media print {
+
+            .toggle-btn,
+            #sidebar,
+            .nav-controls {
+                display: none !important;
+            }
+
             #main-content {
                 padding: 0;
             }
-            .db-card { 
-                width: 100%; 
-                height: auto; 
+
+            .db-card {
+                width: 100%;
+                height: auto;
                 max-width: 100%;
-                box-shadow: none; 
+                box-shadow: none;
                 border: 1px solid #000;
                 page-break-inside: avoid;
             }
@@ -411,17 +465,21 @@
             :root {
                 --sidebar-width: 100%;
             }
+
             .db-card {
                 padding: 40px 30px;
                 height: auto;
                 min-height: 80vh;
             }
+
             .card-header h1 {
                 font-size: 2rem;
             }
+
             .card-body {
                 grid-template-columns: 1fr;
             }
+
             .nav-controls {
                 flex-wrap: wrap;
                 gap: 20px;
@@ -430,398 +488,465 @@
         }
     </style>
 </head>
+
 <body>
 
-<button class="toggle-btn" onclick="toggleSidebar()">☰ 設定</button>
+    <button class="toggle-btn" onclick="toggleSidebar()">☰ 設定</button>
 
-<div id="sidebar">
-    <h2 style="margin-top: 40px; font-size: 1.5rem; color: var(--text-main);">設定パネル</h2>
-    
-    <div class="setting-section">
-        <h3>1️⃣ データ読込</h3>
-        <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 10px 0;">CSVを貼り付けるか、ダブルクリックしてファイル選択</p>
-        <textarea id="csvInput" ondblclick="document.getElementById('fileHidden').click()" oninput="processData()" placeholder="年月日,名前,項目,内容&#10;の形式でCSVを貼り付け"></textarea>
-        <input type="file" id="fileHidden" style="display:none" accept=".csv,.txt" onchange="handleFile(event)">
-        
-        <div class="setting-item">
-            <input type="checkbox" id="enableDedup" checked onchange="processData()">
-            <label for="enableDedup">各項目の最終更新日データのみ抽出</label>
+    <div id="sidebar">
+        <h2 style="margin-top: 40px; font-size: 1.5rem; color: var(--text-main);">設定パネル</h2>
+
+        <div class="setting-section">
+            <h3>1️⃣ indexDATABASE</h3>
+            <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 10px 0;">CSVを貼り付けるか、ダブルクリックでファイル選択</p>
+            <label for="indexDATABASE"
+                style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">indexDATABASE</label>
+            <textarea id="indexDATABASE" ondblclick="document.getElementById('fileHidden').click()"
+                oninput="processData()" placeholder="年月日,名前,項目,内容&#10;の形式でCSVを貼り付け"></textarea>
+            <input type="file" id="fileHidden" style="display:none" accept=".csv,.txt" onchange="handleFile(event)">
+
+            <div class="setting-item">
+                <input type="checkbox" id="enableDedup" checked onchange="processData()">
+                <label for="enableDedup">各項目の最終更新日データのみ抽出</label>
+            </div>
+        </div>
+
+        <div class="setting-section">
+            <h3>2️⃣ 絞り込み条件</h3>
+            <input type="text" id="globalSearch"
+                style="width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;"
+                placeholder="名前を検索..." oninput="renderView()">
+            <p style="font-size: 0.75rem; margin: 10px 0 5px 0; color: #64748b;">基準日以降の記録がある対象のみ表示:</p>
+            <input type="date" id="dateFilter"
+                style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;"
+                onchange="renderView()">
+        </div>
+
+        <div class="setting-section">
+            <h3>3️⃣ 表示項目の設定</h3>
+            <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 8px 0;">表示画面のカード上でドラッグして並び替え・並びは自動保存</p>
+            <div id="headerSettings"></div>
+            <button type="button" class="btn btn-outline" id="btnResetOrder" onclick="resetColumnOrder()"
+                style="margin-top:10px; display:none;">並びを解除</button>
+        </div>
+
+        <div class="setting-section" style="border-top: 2px solid var(--border); padding-top: 20px;">
+            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">
+                <strong id="statsRecords">0</strong> 件のレコード読込済み<br>
+                <strong id="statsPeople">0</strong> 名の人物<br>
+                <strong id="statsItems">0</strong> 個の項目
+            </p>
         </div>
     </div>
-    
-    <div class="setting-section">
-        <h3>2️⃣ 絞り込み条件</h3>
-        <input type="text" id="globalSearch" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;" placeholder="名前を検索..." oninput="renderView()">
-        <p style="font-size: 0.75rem; margin: 10px 0 5px 0; color: #64748b;">基準日以降の記録がある対象のみ表示:</p>
-        <input type="date" id="dateFilter" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;" onchange="renderView()">
-    </div>
 
-    <div class="setting-section">
-        <h3>3️⃣ 表示項目の設定</h3>
-        <div id="headerSettings"></div>
-    </div>
+    <div id="main-content">
+        <div id="cardView" style="width: 100%; display: flex; justify-content: center; align-items: center;">
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>CSVデータを読み込んでください</p>
+            </div>
+        </div>
 
-    <div class="setting-section" style="border-top: 2px solid var(--border); padding-top: 20px;">
-        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">
-            <strong id="statsRecords">0</strong> 件のレコード読込済み<br>
-            <strong id="statsPeople">0</strong> 名の人物<br>
-            <strong id="statsItems">0</strong> 個の項目
-        </p>
-    </div>
-</div>
-
-<div id="main-content">
-    <div id="cardView" style="width: 100%; display: flex; justify-content: center; align-items: center;">
-        <div class="empty-state">
-            <div class="empty-state-icon">📋</div>
-            <p>CSVデータを読み込んでください</p>
+        <div class="nav-controls">
+            <button class="btn btn-primary" onclick="changePage(-1)">◀ PREV</button>
+            <span id="pageInfo"
+                style="font-size: 1.5rem; font-weight: 800; font-family: 'Courier New', Courier, monospace; min-width: 100px; text-align: center;">0
+                / 0</span>
+            <button class="btn btn-primary" onclick="changePage(1)">NEXT ▶</button>
         </div>
     </div>
 
-    <div class="nav-controls">
-        <button class="btn btn-primary" onclick="changePage(-1)">◀ PREV</button>
-        <span id="pageInfo" style="font-size: 1.5rem; font-weight: 800; font-family: 'Courier New', Courier, monospace; min-width: 100px; text-align: center;">0 / 0</span>
-        <button class="btn btn-primary" onclick="changePage(1)">NEXT ▶</button>
-    </div>
-</div>
+    <script>
+        // ===== State Management =====
+        const COLUMN_ORDER_KEY = 'dataViewer_indexDATABASE_columnOrder';
+        let rawRecords = [];
+        let headerConfigs = [];
+        let currentIndex = 0;
+        let filteredPeople = [];
+        let ageShowFlags = {};
+        let draggedIndex = null;
 
-<script>
-// ===== State Management =====
-let rawRecords = [];
-let headerConfigs = [];
-let currentIndex = 0;
-let filteredPeople = [];
-let ageShowFlags = {}; // 項目ごとの年齢表示フラグを管理
+        const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth'];
 
-// 特別な項目キー（生年月日判定用）
-const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth'];
+        function saveColumnOrder() {
+            if (headerConfigs.length === 0) return;
+            try {
+                localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(headerConfigs.map(c => c.raw)));
+                document.getElementById('btnResetOrder').style.display = '';
+            } catch (e) { }
+        }
 
-// ===== UI Control =====
-function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
-    if (document.getElementById('sidebar').classList.contains('open')) {
-        document.addEventListener('click', closeSidebarOnClickOutside);
-    } else {
-        document.removeEventListener('click', closeSidebarOnClickOutside);
-    }
-}
+        function loadColumnOrder() {
+            try {
+                const s = localStorage.getItem(COLUMN_ORDER_KEY);
+                return s ? JSON.parse(s) : null;
+            } catch (e) { return null; }
+        }
 
-function closeSidebarOnClickOutside(e) {
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.querySelector('.toggle-btn');
-    if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
-        sidebar.classList.remove('open');
-        document.removeEventListener('click', closeSidebarOnClickOutside);
-    }
-}
+        function resetColumnOrder() {
+            try { localStorage.removeItem(COLUMN_ORDER_KEY); } catch (e) { }
+            document.getElementById('btnResetOrder').style.display = 'none';
+            if (headerConfigs.length === 0) return;
+            const sorted = [...headerConfigs].sort((a, b) => (a.raw || '').localeCompare(b.raw || ''));
+            headerConfigs.length = 0;
+            headerConfigs.push(...sorted);
+            renderHeaderSettings();
+            renderView();
+        }
 
-// ===== File Handling =====
-function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        document.getElementById('csvInput').value = event.target.result;
-        processData();
-    };
-    reader.onerror = () => {
-        alert('ファイル読込に失敗しました');
-    };
-    reader.readAsText(file, 'UTF-8');
-}
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            if (document.getElementById('sidebar').classList.contains('open')) {
+                document.addEventListener('click', closeSidebarOnClickOutside);
+            } else {
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
+        }
 
-// ===== Date & Age Calculation =====
-function parseDate(dateStr) {
-    const wareki = {
-        'S': 1926, 'H': 1989, 'R': 2019
-    };
-    
-    let normalized = dateStr.trim();
-    
-    // 和暦パターン
-    const warekiMatch = normalized.match(/^([SHR])(\d+)\.(\d+)\.(\d+)$/);
-    if (warekiMatch) {
-        const [, era, year, month, day] = warekiMatch;
-        const baseYear = wareki[era];
-        const yyyy = baseYear + parseInt(year);
-        normalized = `${yyyy}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-    
-    normalized = normalized.replace(/\//g, '-');
-    
-    const date = new Date(normalized);
-    return {
-        str: normalized,
-        ts: isNaN(date.getTime()) ? 0 : date.getTime(),
-        valid: !isNaN(date.getTime()),
-        date: date
-    };
-}
+        function closeSidebarOnClickOutside(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                sidebar.classList.remove('open');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
+        }
 
-function calculateAge(birthDateStr) {
-    const birthDate = parseDate(birthDateStr);
-    
-    if (!birthDate.valid) {
-        return null;
-    }
-    
-    const today = new Date();
-    const birth = birthDate.date;
-    
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    
-    return age >= 0 ? age : null;
-}
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-function isBirthdateField(itemName) {
-    const lower = itemName.toLowerCase();
-    return BIRTHDATE_KEYWORDS.some(keyword => lower.includes(keyword));
-}
-
-// ===== Data Processing =====
-function processData() {
-    const text = document.getElementById('csvInput').value.trim();
-    if (!text) {
-        rawRecords = [];
-        headerConfigs = [];
-        ageShowFlags = {};
-        updateStats();
-        renderView();
-        return;
-    }
-    
-    const allParsed = text.split('\n')
-        .filter(l => l.trim() !== '' && !l.trim().startsWith('#'))
-        .map(line => {
-            const cols = line.split(/,/).map(s => s.trim().replace(/^"|"$/g, ''));
-            const dateInfo = parseDate(cols[0]);
-            
-            return {
-                dateStr: dateInfo.str,
-                ts: dateInfo.ts,
-                valid: dateInfo.valid,
-                name: cols[1] || '',
-                item: cols[2] || '',
-                content: cols[3] || ''
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('indexDATABASE').value = event.target.result;
+                processData();
             };
-        })
-        .filter(r => r.valid && r.name && r.item)
-        .sort((a, b) => b.ts - a.ts);
+            reader.onerror = () => {
+                alert('ファイル読込に失敗しました');
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
 
-    const isFinalOnly = document.getElementById('enableDedup').checked;
-    const allItems = new Set();
-    
-    if (isFinalOnly) {
-        const seen = new Map();
-        rawRecords = [];
-        
-        allParsed.forEach(r => {
-            const key = `${r.name}|${r.item}`;
-            if (!seen.has(key)) {
-                seen.set(key, r);
-                rawRecords.push(r);
+        function parseDate(dateStr) {
+            const wareki = {
+                'S': 1926, 'H': 1989, 'R': 2019
+            };
+
+            let normalized = dateStr.trim();
+
+            // 和暦パターン
+            const warekiMatch = normalized.match(/^([SHR])(\d+)\.(\d+)\.(\d+)$/);
+            if (warekiMatch) {
+                const [, era, year, month, day] = warekiMatch;
+                const baseYear = wareki[era];
+                const yyyy = baseYear + parseInt(year);
+                normalized = `${yyyy}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
             }
-            allItems.add(r.item);
-        });
-    } else {
-        rawRecords = allParsed;
-        allParsed.forEach(r => allItems.add(r.item));
-    }
 
-    if (headerConfigs.length === 0 || headerConfigs.length !== allItems.size) {
-        headerConfigs = Array.from(allItems)
-            .sort()
-            .map(item => ({
-                raw: item,
-                alias: item,
-                active: true
-            }));
-        
-        // 生年月日フィールドのみ年齢表示フラグを初期化
-        ageShowFlags = {};
-        Array.from(allItems).forEach(item => {
-            if (isBirthdateField(item)) {
-                ageShowFlags[item] = true; // デフォルトでON
+            normalized = normalized.replace(/\//g, '-');
+
+            const date = new Date(normalized);
+            return {
+                str: normalized,
+                ts: isNaN(date.getTime()) ? 0 : date.getTime(),
+                valid: !isNaN(date.getTime()),
+                date: date
+            };
+        }
+
+        function calculateAge(birthDateStr) {
+            const birthDate = parseDate(birthDateStr);
+
+            if (!birthDate.valid) {
+                return null;
             }
-        });
-    }
 
-    currentIndex = 0;
-    updateStats();
-    renderHeaderSettings();
-    renderView();
-}
+            const today = new Date();
+            const birth = birthDate.date;
 
-function updateStats() {
-    const uniquePeople = new Set(rawRecords.map(r => r.name));
-    const uniqueItems = new Set(rawRecords.map(r => r.item));
-    
-    document.getElementById('statsRecords').textContent = rawRecords.length;
-    document.getElementById('statsPeople').textContent = uniquePeople.size;
-    document.getElementById('statsItems').textContent = uniqueItems.size;
-}
+            let age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
 
-function renderHeaderSettings() {
-    const container = document.getElementById('headerSettings');
-    
-    if (headerConfigs.length === 0) {
-        container.innerHTML = '<p style="color: #94a3b8; font-size: 0.85rem;">まずデータを読み込んでください</p>';
-        return;
-    }
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
 
-    container.innerHTML = headerConfigs.map((config, i) => {
-        let html = `
+            return age >= 0 ? age : null;
+        }
+
+        function isBirthdateField(itemName) {
+            const lower = itemName.toLowerCase();
+            return BIRTHDATE_KEYWORDS.some(keyword => lower.includes(keyword));
+        }
+
+        function processData() {
+            const text = document.getElementById('indexDATABASE').value.trim();
+            if (!text) {
+                rawRecords = [];
+                headerConfigs = [];
+                ageShowFlags = {};
+                updateStats();
+                renderView();
+                return;
+            }
+
+            const allParsed = text.split('\n')
+                .filter(l => l.trim() !== '' && !l.trim().startsWith('#'))
+                .map(line => {
+                    const cols = line.split(/,/).map(s => s.trim().replace(/^"|"$/g, ''));
+                    const dateInfo = parseDate(cols[0]);
+
+                    return {
+                        dateStr: dateInfo.str,
+                        ts: dateInfo.ts,
+                        valid: dateInfo.valid,
+                        name: cols[1] || '',
+                        item: cols[2] || '',
+                        content: cols[3] || ''
+                    };
+                })
+                .filter(r => r.valid && r.name && r.item)
+                .sort((a, b) => b.ts - a.ts);
+
+            const isFinalOnly = document.getElementById('enableDedup').checked;
+            const allItems = new Set();
+
+            if (isFinalOnly) {
+                const seen = new Map();
+                rawRecords = [];
+
+                allParsed.forEach(r => {
+                    const key = `${r.name}|${r.item}`;
+                    if (!seen.has(key)) {
+                        seen.set(key, r);
+                        rawRecords.push(r);
+                    }
+                    allItems.add(r.item);
+                });
+            } else {
+                rawRecords = allParsed;
+                allParsed.forEach(r => allItems.add(r.item));
+            }
+
+            if (headerConfigs.length === 0 || headerConfigs.length !== allItems.size) {
+                const defaultOrder = Array.from(allItems).sort();
+                const savedOrder = loadColumnOrder();
+                let order = defaultOrder;
+                if (savedOrder && savedOrder.length) {
+                    const inSaved = savedOrder.filter(r => allItems.has(r));
+                    const newOnes = defaultOrder.filter(x => !inSaved.includes(x));
+                    order = [...inSaved, ...newOnes];
+                }
+                headerConfigs = order.map(item => ({
+                    raw: item,
+                    alias: item,
+                    active: true
+                }));
+                ageShowFlags = {};
+                Array.from(allItems).forEach(item => {
+                    if (isBirthdateField(item)) ageShowFlags[item] = true;
+                });
+            }
+
+            currentIndex = 0;
+            updateStats();
+            renderHeaderSettings();
+            renderView();
+
+            // Debounce save to IndexedDB
+            if (window.saveTimeout) clearTimeout(window.saveTimeout);
+            window.saveTimeout = setTimeout(() => {
+                saveDataToDB(text);
+            }, 500);
+        }
+
+        // ===== IndexedDB Persistence =====
+        const DB_NAME = 'DataViewerDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'settings';
+        const DATA_KEY = 'csvData';
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        async function saveDataToDB(data) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put(data, DATA_KEY);
+            } catch (e) {
+                console.error('Failed to save data:', e);
+            }
+        }
+
+        async function loadDataFromDB() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.get(DATA_KEY);
+
+                request.onsuccess = () => {
+                    if (request.result) {
+                        document.getElementById('indexDATABASE').value = request.result;
+                        processData();
+                    }
+                };
+            } catch (e) {
+                console.error('Failed to load data:', e);
+            }
+        }
+
+        function updateStats() {
+            const uniquePeople = new Set(rawRecords.map(r => r.name));
+            const uniqueItems = new Set(rawRecords.map(r => r.item));
+
+            document.getElementById('statsRecords').textContent = rawRecords.length;
+            document.getElementById('statsPeople').textContent = uniquePeople.size;
+            document.getElementById('statsItems').textContent = uniqueItems.size;
+        }
+
+        function renderHeaderSettings() {
+            const container = document.getElementById('headerSettings');
+
+            if (headerConfigs.length === 0) {
+                container.innerHTML = '<p style="color: #94a3b8; font-size: 0.85rem;">まずデータを読み込んでください</p>';
+                return;
+            }
+
+            container.innerHTML = headerConfigs.map((config, i) => {
+                let inner = `
             <div class="header-setting-item">
-                <input 
-                    type="checkbox" 
-                    ${config.active ? 'checked' : ''} 
-                    onchange="headerConfigs[${i}].active = this.checked; renderView()"
-                >
-                <input 
-                    type="text" 
-                    value="${escapeHtml(config.alias)}" 
-                    oninput="headerConfigs[${i}].alias = this.value; renderView()"
-                >
+                <input type="checkbox" ${config.active ? 'checked' : ''} onchange="headerConfigs[${i}].active = this.checked; renderView()">
+                <input type="text" value="${escapeHtml(config.alias)}" oninput="headerConfigs[${i}].alias = this.value; renderView()">
             </div>
         `;
-        
-        // 生年月日フィールドの場合、年齢表示チェックボックスを追加
-        if (isBirthdateField(config.raw)) {
-            const isChecked = ageShowFlags[config.raw] ? 'checked' : '';
-            html = `
+                if (isBirthdateField(config.raw)) {
+                    const isChecked = ageShowFlags[config.raw] ? 'checked' : '';
+                    inner = `
                 <div class="birthdate-group">
                     <div class="header-setting-item">
-                        <input 
-                            type="checkbox" 
-                            ${config.active ? 'checked' : ''} 
-                            onchange="headerConfigs[${i}].active = this.checked; renderView()"
-                        >
-                        <input 
-                            type="text" 
-                            value="${escapeHtml(config.alias)}" 
-                            oninput="headerConfigs[${i}].alias = this.value; renderView()"
-                        >
+                        <input type="checkbox" ${config.active ? 'checked' : ''} onchange="headerConfigs[${i}].active = this.checked; renderView()">
+                        <input type="text" value="${escapeHtml(config.alias)}" oninput="headerConfigs[${i}].alias = this.value; renderView()">
                     </div>
                     <div class="age-checkbox">
-                        <input 
-                            type="checkbox" 
-                            ${isChecked}
-                            onchange="toggleAgeDisplay('${config.raw}')"
-                        >
+                        <input type="checkbox" ${isChecked} onchange="toggleAgeDisplay('${config.raw}')">
                         <label>年齢を計算して表示</label>
                     </div>
                 </div>
             `;
-        }
-        
-        return html;
-    }).join('');
-}
-
-function toggleAgeDisplay(itemName) {
-    ageShowFlags[itemName] = !ageShowFlags[itemName];
-    renderView();
-}
-
-// ===== Filtering & Grouping =====
-function getFilteredPeople() {
-    const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
-    const dateLimit = document.getElementById('dateFilter').value;
-    const dateLimitTs = dateLimit ? new Date(dateLimit).getTime() : 0;
-
-    const grouped = {};
-    rawRecords.forEach(record => {
-        if (!grouped[record.name]) {
-            grouped[record.name] = {
-                name: record.name,
-                records: {},
-                maxTs: 0
-            };
+                }
+                return inner;
+            }).join('');
         }
 
-        const key = record.item;
-        if (!grouped[record.name].records[key] || record.ts > grouped[record.name].records[key].ts) {
-            grouped[record.name].records[key] = record;
+        function toggleAgeDisplay(itemName) {
+            ageShowFlags[itemName] = !ageShowFlags[itemName];
+            renderView();
         }
 
-        if (record.ts > grouped[record.name].maxTs) {
-            grouped[record.name].maxTs = record.ts;
+        function getFilteredPeople() {
+            const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
+            const dateLimit = document.getElementById('dateFilter').value;
+            const dateLimitTs = dateLimit ? new Date(dateLimit).getTime() : 0;
+
+            const grouped = {};
+            rawRecords.forEach(record => {
+                if (!grouped[record.name]) {
+                    grouped[record.name] = {
+                        name: record.name,
+                        records: {},
+                        maxTs: 0
+                    };
+                }
+
+                const key = record.item;
+                if (!grouped[record.name].records[key] || record.ts > grouped[record.name].records[key].ts) {
+                    grouped[record.name].records[key] = record;
+                }
+
+                if (record.ts > grouped[record.name].maxTs) {
+                    grouped[record.name].maxTs = record.ts;
+                }
+            });
+
+            return Object.values(grouped)
+                .filter(person => {
+                    const matchesSearch = person.name.toLowerCase().includes(searchTerm);
+                    const matchesDate = person.maxTs >= dateLimitTs;
+                    return matchesSearch && matchesDate;
+                })
+                .sort((a, b) => b.maxTs - a.maxTs);
         }
-    });
 
-    return Object.values(grouped)
-        .filter(person => {
-            const matchesSearch = person.name.toLowerCase().includes(searchTerm);
-            const matchesDate = person.maxTs >= dateLimitTs;
-            return matchesSearch && matchesDate;
-        })
-        .sort((a, b) => b.maxTs - a.maxTs);
-}
+        // ===== Rendering =====
+        function renderView() {
+            filteredPeople = getFilteredPeople();
+            const container = document.getElementById('cardView');
+            const pageInfo = document.getElementById('pageInfo');
 
-// ===== Rendering =====
-function renderView() {
-    filteredPeople = getFilteredPeople();
-    const container = document.getElementById('cardView');
-    const pageInfo = document.getElementById('pageInfo');
-
-    if (filteredPeople.length === 0) {
-        container.innerHTML = `
+            if (filteredPeople.length === 0) {
+                container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">🔍</div>
                 <p>条件に合致するデータがありません</p>
             </div>
         `;
-        pageInfo.textContent = '0 / 0';
-        return;
-    }
-
-    if (currentIndex >= filteredPeople.length) {
-        currentIndex = 0;
-    }
-
-    const person = filteredPeople[currentIndex];
-    renderCard(person, container);
-    pageInfo.textContent = `${currentIndex + 1} / ${filteredPeople.length}`;
-}
-
-function renderCard(person, container) {
-    const activeConfigs = headerConfigs.filter(c => c.active);
-    
-    const fieldsHtml = activeConfigs.map(config => {
-        const record = person.records[config.raw];
-        const displayValue = record ? record.content : '-';
-        const displayDate = record ? record.dateStr : 'N/A';
-        
-        // 生年月日フィールドで年齢表示が有効な場合
-        let ageHtml = '';
-        if (ageShowFlags[config.raw] && isBirthdateField(config.raw) && record && record.content) {
-            const age = calculateAge(record.content);
-            if (age !== null) {
-                ageHtml = `<div class="field-age">年齢: ${age}才</div>`;
+                pageInfo.textContent = '0 / 0';
+                return;
             }
+
+            if (currentIndex >= filteredPeople.length) {
+                currentIndex = 0;
+            }
+
+            const person = filteredPeople[currentIndex];
+            renderCard(person, container);
+            pageInfo.textContent = `${currentIndex + 1} / ${filteredPeople.length}`;
         }
-        
-        return `
-            <div class="card-field">
+
+        function renderCard(person, container) {
+            const activeWithIndex = headerConfigs
+                .map((config, idx) => ({ config, headerIndex: idx }))
+                .filter(({ config }) => config.active);
+
+            const fieldsHtml = activeWithIndex.map(({ config, headerIndex }) => {
+                const record = person.records[config.raw];
+                const displayValue = record ? record.content : '-';
+                const displayDate = record ? record.dateStr : 'N/A';
+                let ageHtml = '';
+                if (ageShowFlags[config.raw] && isBirthdateField(config.raw) && record && record.content) {
+                    const age = calculateAge(record.content);
+                    if (age !== null) ageHtml = `<div class="field-age">年齢: ${age}才</div>`;
+                }
+                return `
+            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
+                <div class="card-field-handle">⋮⋮</div>
                 <div class="field-label">${escapeHtml(config.alias)}</div>
                 <div class="field-value">${escapeHtml(displayValue)}</div>
                 <div class="field-date">📅 ${escapeHtml(displayDate)}</div>
                 ${ageHtml}
             </div>
         `;
-    }).join('');
+            }).join('');
 
-    const emptyMessage = activeConfigs.length === 0 
-        ? '<div class="empty-state"><p>表示する項目を選択してください</p></div>'
-        : '';
+            const emptyMessage = activeWithIndex.length === 0
+                ? '<div class="empty-state"><p>表示する項目を選択してください</p></div>'
+                : '';
 
-    container.innerHTML = `
+            container.innerHTML = `
         <div class="db-card">
             <div class="card-header">
                 <div style="font-size:0.9rem; color:var(--primary); font-weight:800;">PRIMARY KEY</div>
@@ -832,35 +957,73 @@ function renderCard(person, container) {
             </div>
         </div>
     `;
-}
+        }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-// ===== Navigation =====
-function changePage(step) {
-    if (filteredPeople.length === 0) return;
-    
-    currentIndex = (currentIndex + step + filteredPeople.length) % filteredPeople.length;
-    renderView();
-}
+        function changePage(step) {
+            if (filteredPeople.length === 0) return;
 
-// キーボード操作
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') changePage(-1);
-    if (e.key === 'ArrowRight') changePage(1);
-});
+            currentIndex = (currentIndex + step + filteredPeople.length) % filteredPeople.length;
+            renderView();
+        }
 
-// 初期化
-window.addEventListener('load', () => {
-    updateStats();
-    renderHeaderSettings();
-    renderView();
-});
-</script>
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changePage(-1);
+            if (e.key === 'ArrowRight') changePage(1);
+        });
+
+        function setupDragDrop() {
+            const el = document.getElementById('cardView');
+            if (!el) return;
+            el.addEventListener('dragstart', e => {
+                const field = e.target.closest('.card-field');
+                if (!field) return;
+                draggedIndex = parseInt(field.getAttribute('data-header-index'), 10);
+                field.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', String(draggedIndex));
+            });
+            el.addEventListener('dragend', e => {
+                const field = e.target.closest('.card-field');
+                if (field) field.classList.remove('dragging');
+                draggedIndex = null;
+            });
+            el.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            el.addEventListener('drop', e => {
+                e.preventDefault();
+                const field = e.target.closest('.card-field');
+                if (!field || draggedIndex === null) return;
+                let toIndex = parseInt(field.getAttribute('data-header-index'), 10);
+                if (toIndex === draggedIndex) return;
+                const moved = headerConfigs.splice(draggedIndex, 1)[0];
+                if (draggedIndex < toIndex) toIndex--;
+                headerConfigs.splice(toIndex, 0, moved);
+                saveColumnOrder();
+                renderHeaderSettings();
+                renderView();
+            });
+        }
+
+        window.addEventListener('load', () => {
+            updateStats();
+            renderHeaderSettings();
+            renderView();
+            setupDragDrop();
+            if (loadColumnOrder()) document.getElementById('btnResetOrder').style.display = '';
+
+            // Load persisted data
+            loadDataFromDB();
+        });
+    </script>
 
 </body>
+
 </html>
