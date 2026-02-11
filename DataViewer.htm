@@ -11,7 +11,7 @@
             --card: #ffffff;
             --border: #e2e8f0;
             --text-main: #1e293b;
-            --sidebar-width: 380px;
+            --sidebar-width: 320px;
         }
 
         body {
@@ -34,7 +34,7 @@
             top: 0;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
-            padding: 30px 20px;
+            padding: 20px;
             box-sizing: border-box;
             overflow-y: auto;
             box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
@@ -53,20 +53,20 @@
             align-items: center;
             justify-content: center;
             transition: 0.3s;
-            padding: 40px;
+            padding: 20px;
             box-sizing: border-box;
         }
 
         /* トグルボタン */
         .toggle-btn {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 15px;
+            left: 15px;
             z-index: 1100;
             background: var(--text-main);
             color: white;
             border: none;
-            padding: 12px 18px;
+            padding: 10px 16px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
@@ -82,26 +82,29 @@
         /* 巨大化したカード */
         .db-card {
             background: var(--card);
-            width: 100%;
-            max-width: 1000px;
-            height: 85vh;
-            padding: 60px;
-            border-radius: 32px;
+            width: 95%;
+            max-width: 1250px;
+            /* Adjusted for ~3 columns */
+            height: 90vh;
+            padding: 40px;
+            border-radius: 28px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-            border-top: 15px solid var(--primary);
+            border-top: 12px solid var(--primary);
             display: flex;
             flex-direction: column;
             box-sizing: border-box;
         }
 
         .card-header {
-            border-bottom: 4px solid var(--bg);
-            margin-bottom: 40px;
-            padding-bottom: 15px;
+            border-bottom: 3px solid var(--bg);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            /* Revert flex to align left (stacked) */
+            /* display: flex; justify-content: space-between; align-items: center; */
         }
 
         .card-header h1 {
-            font-size: 3rem;
+            font-size: 2.5rem;
             margin: 0;
             color: var(--text-main);
             letter-spacing: -0.02em;
@@ -111,15 +114,18 @@
             flex: 1;
             overflow-y: auto;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            /* Force ~3 columns */
+            gap: 20px;
+            padding-right: 10px;
         }
 
         .card-field {
             background: #fdfdfd;
             border: 1px solid #f1f5f9;
-            padding: 20px;
-            border-radius: 16px;
+            padding: 15px;
+            /* Reduced padding */
+            border-radius: 12px;
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
@@ -140,7 +146,7 @@
             color: #94a3b8;
             font-size: 1rem;
             user-select: none;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
         .card-field .card-field-handle:active {
@@ -529,6 +535,12 @@
         <div class="setting-section">
             <h3>3️⃣ 表示項目の設定</h3>
             <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 8px 0;">表示画面のカード上でドラッグして並び替え・並びは自動保存</p>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button type="button" onclick="toggleAllHeaders(true)"
+                    style="font-size:0.75rem; padding:4px 8px; cursor:pointer;">全てチェック</button>
+                <button type="button" onclick="toggleAllHeaders(false)"
+                    style="font-size:0.75rem; padding:4px 8px; cursor:pointer;">全て解除</button>
+            </div>
             <div id="headerSettings"></div>
             <button type="button" class="btn btn-outline" id="btnResetOrder" onclick="resetColumnOrder()"
                 style="margin-top:10px; display:none;">並びを解除</button>
@@ -570,12 +582,20 @@
         let ageShowFlags = {};
         let draggedIndex = null;
 
-        const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth'];
+        const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth', '誕生日', 'birthday'];
+
 
         function saveColumnOrder() {
             if (headerConfigs.length === 0) return;
             try {
-                localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(headerConfigs.map(c => c.raw)));
+                // Save full config including alias, active, and showAge
+                const dataToSave = headerConfigs.map(c => ({
+                    raw: c.raw,
+                    alias: c.alias,
+                    active: c.active,
+                    showAge: c.showAge || false
+                }));
+                localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(dataToSave));
                 document.getElementById('btnResetOrder').style.display = '';
             } catch (e) { }
         }
@@ -587,15 +607,18 @@
             } catch (e) { return null; }
         }
 
+
+        function toggleAllHeaders(activeState) {
+            headerConfigs.forEach(c => c.active = activeState);
+            renderHeaderSettings();
+            renderView();
+            saveColumnOrder();
+        }
+
         function resetColumnOrder() {
             try { localStorage.removeItem(COLUMN_ORDER_KEY); } catch (e) { }
             document.getElementById('btnResetOrder').style.display = 'none';
-            if (headerConfigs.length === 0) return;
-            const sorted = [...headerConfigs].sort((a, b) => (a.raw || '').localeCompare(b.raw || ''));
-            headerConfigs.length = 0;
-            headerConfigs.push(...sorted);
-            renderHeaderSettings();
-            renderView();
+            processData(); // Re-process to reset to default state
         }
 
         function toggleSidebar() {
@@ -632,36 +655,46 @@
         }
 
         function parseDate(dateStr) {
+            console.log(`parseDate input: "${dateStr}"`);
             const wareki = {
                 'S': 1926, 'H': 1989, 'R': 2019
             };
 
             let normalized = dateStr.trim();
 
-            // 和暦パターン
+            // 和暦パターン (S=1926, H=1989, R=2019)
+            // Example: R1 = 2019, R2 = 2020. Logic: Base + Year - 1.
             const warekiMatch = normalized.match(/^([SHR])(\d+)\.(\d+)\.(\d+)$/);
             if (warekiMatch) {
                 const [, era, year, month, day] = warekiMatch;
                 const baseYear = wareki[era];
-                const yyyy = baseYear + parseInt(year);
+                const yyyy = baseYear + parseInt(year) - 1;
                 normalized = `${yyyy}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
             }
 
-            normalized = normalized.replace(/\//g, '-');
+            // Remove JP characters and slash
+            normalized = normalized.replace(/[年月日]/g, '-').replace(/-$/, '').replace(/\//g, '-');
+            // Remove double hyphens if any (e.g. from "年" and "月" replacement)
+            normalized = normalized.replace(/--/g, '-');
 
             const date = new Date(normalized);
+            const isValid = !isNaN(date.getTime());
+            console.log(`  -> normalized: "${normalized}", valid: ${isValid}, timestamp: ${isValid ? date.getTime() : 'NaN'}`);
+
             return {
                 str: normalized,
-                ts: isNaN(date.getTime()) ? 0 : date.getTime(),
-                valid: !isNaN(date.getTime()),
+                ts: isValid ? date.getTime() : 0,
+                valid: isValid,
                 date: date
             };
         }
 
         function calculateAge(birthDateStr) {
+            console.log(`calculateAge input: "${birthDateStr}"`);
             const birthDate = parseDate(birthDateStr);
 
             if (!birthDate.valid) {
+                console.warn('  -> Invalid birth date');
                 return null;
             }
 
@@ -675,6 +708,7 @@
                 age--;
             }
 
+            console.log(`  -> Calculated age: ${age}`);
             return age >= 0 ? age : null;
         }
 
@@ -697,7 +731,9 @@
             const allParsed = text.split('\n')
                 .filter(l => l.trim() !== '' && !l.trim().startsWith('#'))
                 .map(line => {
-                    const cols = line.split(/,/).map(s => s.trim().replace(/^"|"$/g, ''));
+                    // Split by comma only
+                    const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+                    const itemName = cols[2] || '';
                     const dateInfo = parseDate(cols[0]);
 
                     return {
@@ -705,12 +741,19 @@
                         ts: dateInfo.ts,
                         valid: dateInfo.valid,
                         name: cols[1] || '',
-                        item: cols[2] || '',
+                        item: itemName,
                         content: cols[3] || ''
                     };
                 })
-                .filter(r => r.valid && r.name && r.item)
-                .sort((a, b) => b.ts - a.ts);
+                .filter(r => r.name && r.item && r.name !== '名前'); // Allow invalid dates (ts=0), but filter empty names/items and header
+
+            // Debug: found invalid date records
+            const invalidDateRecords = allParsed.filter(r => !r.valid && r.name && r.item && r.name !== '名前');
+            if (invalidDateRecords.length > 0) {
+                console.log('[ProcessData] Included records with invalid dates:', invalidDateRecords);
+            }
+
+            allParsed.sort((a, b) => b.ts - a.ts);
 
             const isFinalOnly = document.getElementById('enableDedup').checked;
             const allItems = new Set();
@@ -732,25 +775,65 @@
                 allParsed.forEach(r => allItems.add(r.item));
             }
 
-            if (headerConfigs.length === 0 || headerConfigs.length !== allItems.size) {
-                const defaultOrder = Array.from(allItems).sort();
-                const savedOrder = loadColumnOrder();
-                let order = defaultOrder;
-                if (savedOrder && savedOrder.length) {
-                    const inSaved = savedOrder.filter(r => allItems.has(r));
-                    const newOnes = defaultOrder.filter(x => !inSaved.includes(x));
-                    order = [...inSaved, ...newOnes];
+            // Sync headerConfigs with current data while preserving settings
+            const configMap = new Map();
+            headerConfigs.forEach(c => configMap.set(c.raw, c));
+
+            // Initial load from storage if needed
+            if (headerConfigs.length === 0) {
+                const saved = loadColumnOrder();
+                if (saved && Array.isArray(saved) && saved.length > 0) {
+                    // Check if old format (string array) or new format (object array)
+                    if (typeof saved[0] === 'string') {
+                        saved.forEach(s => {
+                            configMap.set(s, {
+                                raw: s,
+                                alias: s,
+                                active: true,
+                                showAge: isBirthdateField(s)
+                            });
+                        });
+                    } else {
+                        saved.forEach(c => {
+                            // Force enable showAge for birthdate fields if it's undefined (legacy save)
+                            if (isBirthdateField(c.raw) && (c.showAge === undefined || c.showAge === null)) {
+                                c.showAge = true;
+                            }
+                            configMap.set(c.raw, c);
+                        });
+                    }
                 }
-                headerConfigs = order.map(item => ({
-                    raw: item,
-                    alias: item,
-                    active: true
-                }));
-                ageShowFlags = {};
-                Array.from(allItems).forEach(item => {
-                    if (isBirthdateField(item)) ageShowFlags[item] = true;
-                });
             }
+
+            // Rebuild headerConfigs
+            // 1. Keep existing/saved order for items that still exist
+            const newOrder = [];
+            const processed = new Set();
+
+            // Use current configs or saved order as the base for ordering
+            const sourceList = headerConfigs.length > 0 ? headerConfigs : (loadColumnOrder() || []);
+
+            // Handle sourceList being strings (old save) or objects
+            sourceList.forEach(item => {
+                const raw = (typeof item === 'string') ? item : item.raw;
+                if (allItems.has(raw) && !processed.has(raw)) {
+                    let conf = configMap.get(raw);
+                    if (!conf) {
+                        conf = { raw: raw, alias: raw, active: true, showAge: isBirthdateField(raw) };
+                    }
+                    newOrder.push(conf);
+                    processed.add(raw);
+                }
+            });
+
+            // 2. Append new items (alphabetical)
+            const remaining = Array.from(allItems).filter(x => !processed.has(x)).sort();
+            remaining.forEach(r => {
+                const conf = configMap.get(r) || { raw: r, alias: r, active: true, showAge: isBirthdateField(r) };
+                newOrder.push(conf);
+            });
+
+            headerConfigs = newOrder;
 
             currentIndex = 0;
             updateStats();
@@ -831,34 +914,47 @@
             }
 
             container.innerHTML = headerConfigs.map((config, i) => {
+                const handleChange = `headerConfigs[${i}].active = this.checked; renderView(); saveColumnOrder();`;
+                const handleAlias = `headerConfigs[${i}].alias = this.value; renderView(); saveColumnOrder();`;
+
                 let inner = `
             <div class="header-setting-item">
-                <input type="checkbox" ${config.active ? 'checked' : ''} onchange="headerConfigs[${i}].active = this.checked; renderView()">
-                <input type="text" value="${escapeHtml(config.alias)}" oninput="headerConfigs[${i}].alias = this.value; renderView()">
+                <div style="cursor:grab; color:#ccc; margin-right:4px;" title="ドラッグで並び替え">⋮⋮</div>
+                <input type="checkbox" ${config.active ? 'checked' : ''} onchange="${handleChange}">
+                <input type="text" value="${escapeHtml(config.alias)}" oninput="${handleAlias}">
             </div>
         `;
                 if (isBirthdateField(config.raw)) {
-                    const isChecked = ageShowFlags[config.raw] ? 'checked' : '';
+                    const isChecked = config.showAge ? 'checked' : '';
                     inner = `
                 <div class="birthdate-group">
                     <div class="header-setting-item">
-                        <input type="checkbox" ${config.active ? 'checked' : ''} onchange="headerConfigs[${i}].active = this.checked; renderView()">
-                        <input type="text" value="${escapeHtml(config.alias)}" oninput="headerConfigs[${i}].alias = this.value; renderView()">
+                        <div style="cursor:grab; color:#ccc; margin-right:4px;" title="ドラッグで並び替え">⋮⋮</div>
+                        <input type="checkbox" ${config.active ? 'checked' : ''} onchange="${handleChange}">
+                        <input type="text" value="${escapeHtml(config.alias)}" oninput="${handleAlias}">
                     </div>
                     <div class="age-checkbox">
-                        <input type="checkbox" ${isChecked} onchange="toggleAgeDisplay('${config.raw}')">
-                        <label>年齢を計算して表示</label>
+                        <input type="checkbox" ${isChecked} onchange="toggleAgeDisplay(${i})">
+                        <label onclick="toggleAgeDisplay(${i})">年齢を計算して表示</label>
                     </div>
                 </div>
             `;
                 }
                 return inner;
             }).join('');
+
+            // Re-bind drag events for settings list if we want to sort there too (Optional, but user said "reorder settings").
+            // The user said "remember check and order". 
+            // The current drag-drop is on the CARD fields. 
+            // The previous implementation had drag-drop on cards affecting headerConfigs.
+            // Let's ensure the settings list also reflects this or allows it. 
+            // For now, the card view drag-drop controls the order.
         }
 
-        function toggleAgeDisplay(itemName) {
-            ageShowFlags[itemName] = !ageShowFlags[itemName];
+        function toggleAgeDisplay(index) {
+            headerConfigs[index].showAge = !headerConfigs[index].showAge;
             renderView();
+            saveColumnOrder();
         }
 
         function getFilteredPeople() {
@@ -877,12 +973,66 @@
                 }
 
                 const key = record.item;
-                if (!grouped[record.name].records[key] || record.ts > grouped[record.name].records[key].ts) {
+                const currentRecord = grouped[record.name].records[key];
+
+                // Logic to determine if we should update the record for this item
+                let shouldUpdate = false;
+
+                if (!currentRecord) {
+                    shouldUpdate = true;
+                } else {
+                    const isNewer = record.ts > currentRecord.ts;
+                    const hasContent = record.content && record.content.trim() !== '';
+                    const currentHasContent = currentRecord.content && currentRecord.content.trim() !== '';
+
+                    const isBirth = isBirthdateField(key);
+
+                    if (isBirth) {
+                        // For birthdate fields, the record representing the oldest date (the actual birthdate) 
+                        // is prioritized over newer records that might just have a transaction date in cols[0].
+                        const newVal = (record.content && record.content.trim() !== '') ? record.content : record.dateStr;
+                        const currVal = (currentRecord.content && currentRecord.content.trim() !== '') ? currentRecord.content : currentRecord.dateStr;
+
+                        const newBdayTs = parseDate(newVal).ts;
+                        const currBdayTs = parseDate(currVal).ts;
+
+                        if (newBdayTs < currBdayTs) {
+                            // New record contains an older date (more likely to be the real birthdate)
+                            shouldUpdate = true;
+                        } else if (newBdayTs === currBdayTs) {
+                            // If birthdates are the same, prefer the one with explicit content or the newer record
+                            if (hasContent && !currentHasContent) {
+                                shouldUpdate = true;
+                            } else if (isNewer && (hasContent === currentHasContent)) {
+                                shouldUpdate = true;
+                            }
+                        }
+                    } else if (hasContent) {
+                        // If new one has content, update if it's newer (standard) 
+                        // OR if current has NO content (fill in the gap even if older, though unlikely with sort)
+                        if (isNewer || !currentHasContent) {
+                            shouldUpdate = true;
+                        }
+                    } else {
+                        // If new one has NO content
+                        // Only update if current one also has NO content AND new one is newer
+                        // (i.e. don't overwrite valid content with empty content even if newer)
+                        if (!currentHasContent && isNewer) {
+                            shouldUpdate = true;
+                        }
+                    }
+                }
+
+                if (shouldUpdate) {
                     grouped[record.name].records[key] = record;
                 }
 
                 if (record.ts > grouped[record.name].maxTs) {
                     grouped[record.name].maxTs = record.ts;
+                }
+
+                if (isBirthdateField(key)) {
+                    // Birthdate records are already uniquely handled during merge.
                 }
             });
 
@@ -931,17 +1081,22 @@
                 const displayValue = record ? record.content : '-';
                 const displayDate = record ? record.dateStr : 'N/A';
                 let ageHtml = '';
-                if (ageShowFlags[config.raw] && isBirthdateField(config.raw) && record && record.content) {
-                    const age = calculateAge(record.content);
-                    if (age !== null) ageHtml = `<div class="field-age">年齢: ${age}才</div>`;
+
+                const isBirth = isBirthdateField(config.raw);
+
+                if (config.showAge && isBirth && record) {
+                    const birthValue = (record.content && record.content.trim() !== '') ? record.content : record.dateStr;
+                    const age = calculateAge(birthValue);
+                    if (age !== null) ageHtml = `<div class="field-age">現在の年齢: ${age}才</div>`;
                 }
-                return `
-            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
+                return `            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
                 <div class="card-field-handle">⋮⋮</div>
                 <div class="field-label">${escapeHtml(config.alias)}</div>
-                <div class="field-value">${escapeHtml(displayValue)}</div>
+                <div class="field-value">
+                    ${escapeHtml(displayValue)}
+                    ${ageHtml}
+                </div>
                 <div class="field-date">📅 ${escapeHtml(displayDate)}</div>
-                ${ageHtml}
             </div>
         `;
             }).join('');
