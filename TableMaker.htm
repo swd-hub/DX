@@ -374,7 +374,8 @@
             .config-grid,
             .stats-grid,
             .data-text-preview,
-            .raw-data-preview {
+            .raw-data-preview,
+            #panelArea {
                 display: none !important;
             }
 
@@ -395,6 +396,8 @@
             table {
                 page-break-inside: avoid;
                 width: 100%;
+                border-collapse: collapse !important;
+                border: 2px solid #000 !important;
             }
 
             thead {
@@ -408,7 +411,8 @@
             .preview-title {
                 page-break-after: avoid;
                 font-size: 1.4rem;
-                margin-bottom: 10mm;
+                margin-top: 0;
+                margin-bottom: 5mm;
             }
 
             th,
@@ -426,7 +430,7 @@
 </head>
 
 <body>
-    <h1 style="text-align: center; color: #4f46e5; margin-bottom: 30px;">
+    <h1 class="no-print" style="text-align: center; color: #4f46e5; margin-bottom: 30px;">
         📊 資料作成ツール（DX推進）
     </h1>
 
@@ -435,13 +439,13 @@
             <button type="button" class="btn btn-primary" id="togglePanelBtn" onclick="togglePanelVisibility()">▼
                 操作パネルを非表示</button>
             <button type="button" class="btn btn-sm" style="background: #64748b; color: white; margin-left: 8px;"
-                onclick="clearIndexedDB()" title="保存したデータを削除">🗑 IndexedDBクリア</button>
+                onclick="clearIndexedDB()" title="保存したデータを削除">🗑 自動読み込みデータクリア</button>
         </div>
         <div id="panelArea">
             <div class="card no-print">
                 <h3>1. データの読み込み</h3>
                 <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">
-                    枠内を<strong>「2回トントン（ダブルクリック）」</strong>してファイルを選ぶか、貼り付けてください。</p>
+                    枠内を<strong>「マウスダブルクリック」</strong>してファイルを選ぶか、データをコピー＆ペーストしてください。</p>
                 <textarea id="csvInput" ondblclick="document.getElementById('fileHidden').click()"
                     oninput="processData()" placeholder="ここにデータを貼り付けてください"></textarea>
                 <input type="file" id="fileHidden" style="display:none" accept=".csv" onchange="handleFile(event)">
@@ -460,7 +464,8 @@
                     </div>
 
                     <div style="margin-bottom: 10px; text-align: right;">
-                        <button class="btn btn-sm btn-info" onclick="toggleRawJsonPreview()">📄 元データをJSONで確認</button>
+                        <button class="btn btn-sm btn-info" onclick="toggleRawJsonPreview()">📄
+                            名前ごとに整理したJSON形式で確認</button>
                     </div>
 
                     <div id="rawJsonPreviewArea" class="raw-data-preview">
@@ -486,15 +491,9 @@
                 </div>
             </div>
 
-            <div class="card no-print">
-                <h3>2. 表題（タイトル）を決める</h3>
-                <input type="text" id="tableTitle" placeholder="例：月間まとめ"
-                    style="width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px;"
-                    oninput="renderTable()">
-            </div>
 
             <div id="configSection" class="card no-print" style="display:none;">
-                <h3>3. 項目の表示設定</h3>
+                <h3>2. 項目の表示設定</h3>
                 <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">
                     下の表で、見出し（ヘッダー）をマウスで<strong>左右にドラッグ＆ドロップ</strong>すると順番を入れ替えられます。<br>
                     ここの入力欄の数字も連動して変わります。
@@ -526,6 +525,13 @@
                 </div>
             </div>
         </div><!-- /#panelArea -->
+
+        <div class="card no-print">
+            <h3>3. 表題（タイトル）を決める</h3>
+            <input type="text" id="tableTitle" placeholder="例：月間まとめ"
+                style="width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px;"
+                oninput="renderTable()">
+        </div>
 
         <div class="card">
             <div id="dataTextPreview" class="data-text-preview no-print">
