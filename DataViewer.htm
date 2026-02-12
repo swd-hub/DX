@@ -12,6 +12,7 @@
             --border: #e2e8f0;
             --text-main: #1e293b;
             --sidebar-width: 320px;
+            --right-sidebar-width: 280px;
         }
 
         body {
@@ -101,6 +102,85 @@
             padding-bottom: 10px;
             /* Revert flex to align left (stacked) */
             /* display: flex; justify-content: space-between; align-items: center; */
+        }
+
+        /* 右サイドバー (名前リスト) */
+        #right-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: var(--right-sidebar-width);
+            height: 100vh;
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .right-sidebar-toggle {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1100;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+            display: none;
+            /* Mobile only or optional */
+        }
+
+        .name-list-group {
+            margin-bottom: 20px;
+        }
+
+        .name-list-header {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--primary);
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            position: sticky;
+            top: -20px;
+            z-index: 10;
+        }
+
+        .name-item {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .name-item:hover {
+            background: rgba(79, 70, 229, 0.05);
+            color: var(--primary);
+        }
+
+        .name-item.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+        }
+
+        .name-item .furigana-hint {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-left: 4px;
         }
 
         .card-header h1 {
@@ -456,6 +536,10 @@
                 padding: 0;
             }
 
+            #right-sidebar {
+                display: none !important;
+            }
+
             .db-card {
                 width: 100%;
                 height: auto;
@@ -463,6 +547,28 @@
                 box-shadow: none;
                 border: 1px solid #000;
                 page-break-inside: avoid;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            #right-sidebar {
+                transform: translateX(100%);
+            }
+
+            #right-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .right-sidebar-toggle {
+                display: block;
+            }
+
+            #main-content {
+                margin-right: 0 !important;
             }
         }
 
@@ -555,7 +661,17 @@
         </div>
     </div>
 
-    <div id="main-content">
+    <div id="right-sidebar">
+        <h3
+            style="font-size: 1rem; color: var(--text-main); margin-bottom: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 5px;">
+            👤 名前の索引
+        </h3>
+        <div id="nameListContainer"></div>
+    </div>
+
+    <button class="right-sidebar-toggle" onclick="toggleRightSidebar()">👤</button>
+
+    <div id="main-content" style="margin-right: var(--right-sidebar-width); transition: 0.3s;">
         <div id="cardView" style="width: 100%; display: flex; justify-content: center; align-items: center;">
             <div class="empty-state">
                 <div class="empty-state-icon">📋</div>
@@ -583,6 +699,7 @@
         let draggedIndex = null;
 
         const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth', '誕生日', 'birthday'];
+        const FURIGANA_KEYWORDS = ['ふりがな', 'フリガナ', '読み', 'よみ', 'furigana', 'yomi'];
 
 
         function saveColumnOrder() {
@@ -715,6 +832,43 @@
         function isBirthdateField(itemName) {
             const lower = itemName.toLowerCase();
             return BIRTHDATE_KEYWORDS.some(keyword => lower.includes(keyword));
+        }
+
+        function isFuriganaField(itemName) {
+            const lower = itemName.toLowerCase();
+            return FURIGANA_KEYWORDS.some(keyword => lower.includes(keyword));
+        }
+
+        function getFurigana(person) {
+            const furiganaKey = Object.keys(person.records).find(k => isFuriganaField(k));
+            if (furiganaKey && person.records[furiganaKey]) {
+                const content = person.records[furiganaKey].content;
+                if (content && content.trim()) return content.trim();
+            }
+            return person.name; // Fallback to name if no furigana found
+        }
+
+        function getFuriganaGroup(furigana) {
+            if (!furigana) return '他';
+            const firstChar = furigana.charAt(0);
+            const code = firstChar.charCodeAt(0);
+
+            // ひらがな/カタカナ 範囲判定
+            if ((code >= 0x3041 && code <= 0x3096) || (code >= 0x30A1 && code <= 0x30FA)) {
+                const char = firstChar.replace(/[ァ-ヶ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60)); // カタカナをひらがなに
+                if ('あいうえお'.includes(char)) return 'あ行';
+                if ('かきくけこがぎぐげご'.includes(char)) return 'か行';
+                if ('さしすせそざじずぜぞ'.includes(char)) return 'さ行';
+                if ('たちつてとだぢづでど'.includes(char)) return 'た行';
+                if ('なにぬねの'.includes(char)) return 'な行';
+                if ('はひふへほばびぶべぼぱぴぷぺぽ'.includes(char)) return 'は行';
+                if ('まみむめも'.includes(char)) return 'ま行';
+                if ('やゆよ'.includes(char)) return 'や行';
+                if ('らりるれろ'.includes(char)) return 'ら行';
+                if ('わをん'.includes(char)) return 'わ行';
+            }
+            if (/[a-zA-Z]/.test(firstChar)) return firstChar.toUpperCase();
+            return '他';
         }
 
         function processData() {
@@ -1036,13 +1190,21 @@
                 }
             });
 
-            return Object.values(grouped)
+            const list = Object.values(grouped)
                 .filter(person => {
                     const matchesSearch = person.name.toLowerCase().includes(searchTerm);
                     const matchesDate = person.maxTs >= dateLimitTs;
                     return matchesSearch && matchesDate;
-                })
-                .sort((a, b) => b.maxTs - a.maxTs);
+                });
+
+            // Sort by furigana for the list if available, otherwise by maxTs for backward compatibility/consistency
+            list.sort((a, b) => {
+                const fA = getFurigana(a);
+                const fB = getFurigana(b);
+                return fA.localeCompare(fB, 'ja');
+            });
+
+            return list;
         }
 
         // ===== Rendering =====
@@ -1069,6 +1231,60 @@
             const person = filteredPeople[currentIndex];
             renderCard(person, container);
             pageInfo.textContent = `${currentIndex + 1} / ${filteredPeople.length}`;
+            renderNameSidebar();
+        }
+
+        function toggleRightSidebar() {
+            document.getElementById('right-sidebar').classList.toggle('open');
+        }
+
+        function jumpToPerson(index) {
+            currentIndex = index;
+            renderView();
+            // Close sidebar on small screens if jumping
+            if (window.innerWidth <= 1024) {
+                document.getElementById('right-sidebar').classList.remove('open');
+            }
+        }
+
+        function renderNameSidebar() {
+            const container = document.getElementById('nameListContainer');
+            if (filteredPeople.length === 0) {
+                container.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8;">データがありません</p>';
+                return;
+            }
+
+            // Grouping
+            const groups = {};
+            filteredPeople.forEach((person, index) => {
+                const furigana = getFurigana(person);
+                const groupName = getFuriganaGroup(furigana);
+                if (!groups[groupName]) groups[groupName] = [];
+                groups[groupName].push({ person, index, furigana });
+            });
+
+            const sortedGroups = Object.keys(groups).sort((a, b) => {
+                const order = ['あ行', 'か行', 'さ行', 'た行', 'な行', 'は行', 'ま行', 'や行', 'ら行', 'わ行', '他'];
+                const idxA = order.indexOf(a);
+                const idxB = order.indexOf(b);
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+                return a.localeCompare(b);
+            });
+
+            container.innerHTML = sortedGroups.map(groupName => `
+                <div class="name-list-group">
+                    <div class="name-list-header">${groupName}</div>
+                    ${groups[groupName].map(item => {
+                const isActive = (item.index === currentIndex) ? 'active' : '';
+                const fHint = item.furigana !== item.person.name ? `<span class="furigana-hint">(${escapeHtml(item.furigana)})</span>` : '';
+                return `<div class="name-item ${isActive}" onclick="jumpToPerson(${item.index})">
+                            ${escapeHtml(item.person.name)}${fHint}
+                        </div>`;
+            }).join('')}
+                </div>
+            `).join('');
         }
 
         function renderCard(person, container) {
