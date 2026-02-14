@@ -457,6 +457,9 @@
                                 class="stat-value">0</span></div>
                         <div class="stat-item"><span class="stat-label">有効データ</span><span id="statUnique"
                                 class="stat-value">0</span></div>
+                        <div class="stat-item" style="border-color: #10b981;"><span class="stat-label">抽出件数</span><span
+                                id="statFiltered" class="stat-value">0</span>
+                        </div>
                         <div class="stat-item" style="border-color: var(--primary);"><span
                                 class="stat-label">今の表のサイズ</span><span id="statTableDim" class="stat-value">0 × 0</span>
                         </div>
@@ -829,6 +832,17 @@
                         fFreq: 1,
                         fContent: '',
                         isNameColumn: true
+                    },
+                    {
+                        raw: '__AGE__',
+                        sourceName: '年齢 (計算)',
+                        displayName: '年齢',
+                        order: 0,
+                        mode: 'content',
+                        fDate: '',
+                        fFreq: 1,
+                        fContent: '',
+                        isNameColumn: false
                     }
                 ];
 
@@ -846,6 +860,31 @@
                     });
                 });
                 columnWidths = {};
+            } else {
+                // 既存設定がある場合でも仮想カラムを補完
+                if (!headerConfigs.find(c => c.raw === '__NAME__')) {
+                    headerConfigs.unshift({
+                        raw: '__NAME__', sourceName: '名前（対象）', displayName: '名前（対象）',
+                        order: 0, mode: 'content', fDate: '', fFreq: 1, fContent: '', isNameColumn: true
+                    });
+                }
+                if (!headerConfigs.find(c => c.raw === '__AGE__')) {
+                    const nameIdx = headerConfigs.findIndex(c => c.raw === '__NAME__');
+                    headerConfigs.splice(nameIdx + 1, 0, {
+                        raw: '__AGE__', sourceName: '年齢 (計算)', displayName: '年齢',
+                        order: 0, mode: 'content', fDate: '', fFreq: 1, fContent: '', isNameColumn: false
+                    });
+                }
+
+                // 新しい項目（CSVに新しく出現した項目）があれば追加
+                Array.from(itemSet).forEach(item => {
+                    if (!headerConfigs.find(c => c.raw === item)) {
+                        headerConfigs.push({
+                            raw: item, sourceName: item, displayName: item,
+                            order: 0, mode: 'content', fDate: '', fFreq: 1, fContent: '', isNameColumn: false
+                        });
+                    }
+                });
             }
 
             document.getElementById('statsPanel').style.display = 'block';
@@ -1016,6 +1055,24 @@
                         return name;
                     }
 
+                    if (c.raw === '__AGE__') {
+                        const birthdateItems = grouped[name].items['生年月日'] || [];
+                        if (birthdateItems.length === 0) return "-";
+
+                        // 最新の「生年月日」データを使用
+                        const latestBirthRecord = birthdateItems[birthdateItems.length - 1];
+                        const birthDate = parseJapaneseDate(latestBirthRecord.date);
+                        if (!birthDate || isNaN(birthDate)) return "-";
+
+                        const refDate = new Date(dateLimitTs);
+                        let age = refDate.getFullYear() - birthDate.getFullYear();
+                        const m = refDate.getMonth() - birthDate.getMonth();
+                        if (m < 0 || (m === 0 && refDate.getDate() < birthDate.getDate())) {
+                            age--;
+                        }
+                        return age + " 歳";
+                    }
+
                     let items = grouped[name].items[c.raw] || [];
 
                     if (c.fDate) items = items.filter(it => it.date.includes(c.fDate));
@@ -1094,6 +1151,7 @@
             document.getElementById('statTotal').innerText = stats.total;
             document.getElementById('statFullDup').innerText = stats.fullDup;
             document.getElementById('statUnique').innerText = stats.unique;
+            document.getElementById('statFiltered').innerText = rows.length;
             document.getElementById('statTableDim').innerText = `${rows.length}件 × ${headers.length}項目`;
 
             generatePrintStyles(configIndices);
