@@ -500,10 +500,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 8px 10px;
-            margin-bottom: 0;
-            background: #ffffff;
-            border: 1px solid #f1f5f9;
+            padding: 8px 12px;
+            margin-left: 24px;
+            margin-bottom: 8px;
+            margin-top: -4px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
             border-radius: 8px;
         }
 
@@ -632,7 +634,7 @@
             <input type="text" id="globalSearch"
                 style="width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;"
                 placeholder="名前を検索..." oninput="renderView()">
-            <p style="font-size: 0.75rem; margin: 10px 0 5px 0; color: #64748b;">基準日以降の記録がある対象のみ表示:</p>
+            <p style="font-size: 0.75rem; margin: 10px 0 5px 0; color: #64748b;">年齢計算の基準日:</p>
             <input type="date" id="dateFilter"
                 style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;"
                 onchange="renderView()">
@@ -710,7 +712,8 @@
                     raw: c.raw,
                     alias: c.alias,
                     active: c.active,
-                    showAge: c.showAge || false
+                    showAge: c.showAge || false,
+                    ageAlias: c.ageAlias || '年齢'
                 }));
                 localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(dataToSave));
                 document.getElementById('btnResetOrder').style.display = '';
@@ -806,8 +809,8 @@
             };
         }
 
-        function calculateAge(birthDateStr) {
-            console.log(`calculateAge input: "${birthDateStr}"`);
+        function calculateAge(birthDateStr, referenceDateVal) {
+            console.log(`calculateAge input: "${birthDateStr}", ref: "${referenceDateVal}"`);
             const birthDate = parseDate(birthDateStr);
 
             if (!birthDate.valid) {
@@ -815,13 +818,18 @@
                 return null;
             }
 
-            const today = new Date();
+            const refDate = referenceDateVal ? new Date(referenceDateVal) : new Date();
+            if (isNaN(refDate.getTime())) {
+                console.warn('  -> Invalid reference date');
+                return null;
+            }
+
             const birth = birthDate.date;
 
-            let age = today.getFullYear() - birth.getFullYear();
-            const monthDiff = today.getMonth() - birth.getMonth();
+            let age = refDate.getFullYear() - birth.getFullYear();
+            const monthDiff = refDate.getMonth() - birth.getMonth();
 
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            if (monthDiff < 0 || (monthDiff === 0 && refDate.getDate() < birth.getDate())) {
                 age--;
             }
 
@@ -944,7 +952,8 @@
                                 raw: s,
                                 alias: s,
                                 active: true,
-                                showAge: isBirthdateField(s)
+                                showAge: isBirthdateField(s),
+                                ageAlias: '年齢'
                             });
                         });
                     } else {
@@ -952,6 +961,9 @@
                             // Force enable showAge for birthdate fields if it's undefined (legacy save)
                             if (isBirthdateField(c.raw) && (c.showAge === undefined || c.showAge === null)) {
                                 c.showAge = true;
+                            }
+                            if (isBirthdateField(c.raw) && !c.ageAlias) {
+                                c.ageAlias = '年齢';
                             }
                             configMap.set(c.raw, c);
                         });
@@ -973,7 +985,7 @@
                 if (allItems.has(raw) && !processed.has(raw)) {
                     let conf = configMap.get(raw);
                     if (!conf) {
-                        conf = { raw: raw, alias: raw, active: true, showAge: isBirthdateField(raw) };
+                        conf = { raw: raw, alias: raw, active: true, showAge: isBirthdateField(raw), ageAlias: '年齢' };
                     }
                     newOrder.push(conf);
                     processed.add(raw);
@@ -983,7 +995,7 @@
             // 2. Append new items (alphabetical)
             const remaining = Array.from(allItems).filter(x => !processed.has(x)).sort();
             remaining.forEach(r => {
-                const conf = configMap.get(r) || { raw: r, alias: r, active: true, showAge: isBirthdateField(r) };
+                const conf = configMap.get(r) || { raw: r, alias: r, active: true, showAge: isBirthdateField(r), ageAlias: '年齢' };
                 newOrder.push(conf);
             });
 
@@ -1070,6 +1082,7 @@
             container.innerHTML = headerConfigs.map((config, i) => {
                 const handleChange = `headerConfigs[${i}].active = this.checked; renderView(); saveColumnOrder();`;
                 const handleAlias = `headerConfigs[${i}].alias = this.value; renderView(); saveColumnOrder();`;
+                const handleAgeAlias = `headerConfigs[${i}].ageAlias = this.value; renderView(); saveColumnOrder();`;
 
                 let inner = `
             <div class="header-setting-item">
@@ -1089,7 +1102,7 @@
                     </div>
                     <div class="age-checkbox">
                         <input type="checkbox" ${isChecked} onchange="toggleAgeDisplay(${i})">
-                        <label onclick="toggleAgeDisplay(${i})">年齢を計算して表示</label>
+                        <input type="text" value="${escapeHtml(config.ageAlias || '年齢')}" oninput="${handleAgeAlias}">
                     </div>
                 </div>
             `;
@@ -1113,8 +1126,7 @@
 
         function getFilteredPeople() {
             const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
-            const dateLimit = document.getElementById('dateFilter').value;
-            const dateLimitTs = dateLimit ? new Date(dateLimit).getTime() : 0;
+            // Note: dateFilter is now used for age calculation, not filtering.
 
             const grouped = {};
             rawRecords.forEach(record => {
@@ -1142,8 +1154,6 @@
                     const isBirth = isBirthdateField(key);
 
                     if (isBirth) {
-                        // For birthdate fields, the record representing the oldest date (the actual birthdate) 
-                        // is prioritized over newer records that might just have a transaction date in cols[0].
                         const newVal = (record.content && record.content.trim() !== '') ? record.content : record.dateStr;
                         const currVal = (currentRecord.content && currentRecord.content.trim() !== '') ? currentRecord.content : currentRecord.dateStr;
 
@@ -1151,10 +1161,8 @@
                         const currBdayTs = parseDate(currVal).ts;
 
                         if (newBdayTs < currBdayTs) {
-                            // New record contains an older date (more likely to be the real birthdate)
                             shouldUpdate = true;
                         } else if (newBdayTs === currBdayTs) {
-                            // If birthdates are the same, prefer the one with explicit content or the newer record
                             if (hasContent && !currentHasContent) {
                                 shouldUpdate = true;
                             } else if (isNewer && (hasContent === currentHasContent)) {
@@ -1162,15 +1170,10 @@
                             }
                         }
                     } else if (hasContent) {
-                        // If new one has content, update if it's newer (standard) 
-                        // OR if current has NO content (fill in the gap even if older, though unlikely with sort)
                         if (isNewer || !currentHasContent) {
                             shouldUpdate = true;
                         }
                     } else {
-                        // If new one has NO content
-                        // Only update if current one also has NO content AND new one is newer
-                        // (i.e. don't overwrite valid content with empty content even if newer)
                         if (!currentHasContent && isNewer) {
                             shouldUpdate = true;
                         }
@@ -1184,20 +1187,14 @@
                 if (record.ts > grouped[record.name].maxTs) {
                     grouped[record.name].maxTs = record.ts;
                 }
-
-                if (isBirthdateField(key)) {
-                    // Birthdate records are already uniquely handled during merge.
-                }
             });
 
             const list = Object.values(grouped)
                 .filter(person => {
                     const matchesSearch = person.name.toLowerCase().includes(searchTerm);
-                    const matchesDate = person.maxTs >= dateLimitTs;
-                    return matchesSearch && matchesDate;
+                    return matchesSearch; // Date filter removed
                 });
 
-            // Sort by furigana for the list if available, otherwise by maxTs for backward compatibility/consistency
             list.sort((a, b) => {
                 const fA = getFurigana(a);
                 const fB = getFurigana(b);
@@ -1302,8 +1299,10 @@
 
                 if (config.showAge && isBirth && record) {
                     const birthValue = (record.content && record.content.trim() !== '') ? record.content : record.dateStr;
-                    const age = calculateAge(birthValue);
-                    if (age !== null) ageHtml = `<div class="field-age">現在の年齢: ${age}才</div>`;
+                    const refDate = document.getElementById('dateFilter').value;
+                    const age = calculateAge(birthValue, refDate);
+                    const ageAlias = config.ageAlias || '年齢';
+                    if (age !== null) ageHtml = `<div class="field-age">${escapeHtml(ageAlias)}: ${age}才</div>`;
                 }
                 return `            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
                 <div class="card-field-handle">⋮⋮</div>
@@ -1388,6 +1387,13 @@
         }
 
         window.addEventListener('load', () => {
+            // Set default date filter to today
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('dateFilter').value = `${yyyy}-${mm}-${dd}`;
+
             updateStats();
             renderHeaderSettings();
             renderView();
