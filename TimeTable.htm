@@ -103,10 +103,33 @@
             margin-bottom: 20px;
         }
 
-        .data-input h3 {
-            color: #2d3748;
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
+        }
+
+        .data-header h3 {
+            color: #2d3748;
+            margin: 0;
             font-size: 16px;
+        }
+
+        .btn-small-clear {
+            padding: 5px 15px;
+            font-size: 13px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(245, 87, 108, 0.2);
+        }
+
+        .btn-small-clear:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
         }
 
         textarea {
@@ -166,9 +189,22 @@
 
         .timeline-container {
             overflow-x: auto;
-            margin-top: 30px;
-            border-radius: 15px;
+            margin-top: 5px;
+            border-radius: 0 0 15px 15px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .top-scroll-container {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 20px;
+            margin-top: 30px;
+            border-radius: 15px 15px 0 0;
+            background: #f7fafc;
+        }
+
+        .top-scroll-dummy {
+            height: 1px;
         }
 
         .timeline-table {
@@ -181,9 +217,10 @@
 
         .timeline-table th,
         .timeline-table td {
-            padding: 15px;
+            padding: 10px;
             text-align: left;
             border: 1px solid #e2e8f0;
+            vertical-align: top;
         }
 
         .timeline-table thead th {
@@ -221,8 +258,8 @@
         }
 
         .timeline-cell {
-            min-width: 150px;
-            font-size: 13px;
+            min-width: 120px;
+            font-size: 12px;
             color: #4a5568;
             vertical-align: top;
         }
@@ -230,11 +267,11 @@
         .cell-content {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 2px;
         }
 
         .field-item {
-            padding: 5px 10px;
+            padding: 2px 6px;
             background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
             border-radius: 5px;
             border-left: 3px solid #667eea;
@@ -243,7 +280,7 @@
         .field-label {
             font-weight: 600;
             color: #667eea;
-            font-size: 11px;
+            font-size: 10px;
             margin-bottom: 2px;
         }
 
@@ -288,22 +325,55 @@
 
         <div class="controls">
             <div class="data-input">
-                <h3>💾 indexDATABASE / 📋 データ入力</h3>
+                <div class="data-header">
+                    <h3>💾 indexDATABASE / 📋 データ入力</h3>
+                    <button class="btn-small-clear" onclick="clearData()">🧹 クリア</button>
+                </div>
                 <input type="file" id="fileInput" accept=".csv,.json,.txt" style="display: none;" />
                 <textarea id="dataInput"
-                    placeholder="IndexedDBから読み込まれたデータがここに表示されます...\n\nまたはCSVまたはJSON形式のデータを貼り付けてください...\n\nまたはダブルクリックでファイルを読み込み"
-                    ondblclick="document.getElementById('fileInput').click()"></textarea>
+                    placeholder="【日付、名前、作業項目、(任意で値)】の順に入力してください&#10;例：&#10;R6.4, 田中, 耕起&#10;R6.4, 田中, 肥料, 10kg&#10;R6.5, 佐藤, 水やり&#10;&#10;ダブルクリックでファイルを読み込み"></textarea>
             </div>
 
-
-
-            <h2>表示項目設定</h2>
+            <h2>表示項目設定（データ内の項目を自動検出）</h2>
             <div class="field-selector" id="fieldSelector"></div>
+
+            <div
+                style="margin-top: 15px; padding: 15px; background: rgba(255, 255, 255, 0.7); border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.9rem; color: #4a5568;">
+                <div style="font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                    🔍 表示判定の基準
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+                    <div>
+                        基準日: <input type="date" id="referenceDate" onchange="generateTimeline(true)"
+                            style="padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        <button type="button" class="btn-small-clear" onclick="setToToday()"
+                            style="background: #667eea; margin-left: 5px;">今日</button>
+                    </div>
+                    <div>
+                        新規就農日がない場合の遡り年数(X): <input type="number" id="backwardYearsX" value="4" min="1"
+                            onchange="generateTimeline(true)"
+                            style="padding: 5px; width: 60px; border: 1px solid #cbd5e1; border-radius: 4px;"> 年
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.8rem; line-height: 1.5; color: #718096;">
+                    ※「青年等就農計画推進会議」の「新規就農」がある場合は認定日が基準日より5年以内、<br>
+                    　無い場合は最も新しい記録が基準日よりX年以内の対象者を表示します。
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+                <button class="btn-primary" onclick="copyTableAsCSV(this)"
+                    style="background: #48bb78; width: auto; padding: 8px 16px; font-size: 13px;">📋
+                    生成された表をCSVコピー</button>
+            </div>
         </div>
 
-        <div class="button-group">
+        <div class="button-group" style="display: none;">
             <button class="btn-primary" onclick="generateTimeline()">📊 タイムテーブル生成</button>
-            <button class="btn-secondary" onclick="clearData()">🧹 クリア</button>
+        </div>
+
+        <div class="top-scroll-container" id="topScrollContainer">
+            <div class="top-scroll-dummy" id="topScrollDummy"></div>
         </div>
 
         <div class="timeline-container">
@@ -313,7 +383,7 @@
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="100" class="no-data">データを入力して「タイムテーブル生成」ボタンをクリックしてください</td>
+                        <td colspan="100" class="no-data">上にデータを入力すると、自動的にタイムテーブルが生成されます</td>
                     </tr>
                 </tbody>
             </table>
@@ -321,337 +391,600 @@
     </div>
 
     <script>
-        // Available fields for display (dynamically generated from data)
         let availableFields = [];
         let parsedData = [];
-        let nameFieldKey = null; // Dynamically detected name field
+        let nameFieldKey = null;
+        let selectedFieldStates = {};
+        let isInitialLoading = true; // Guard to prevent auto-save during loading
 
-        // Find the name field from data (looks for fields containing '名前' or 'name')
+        // IndexedDB Configuration
+        const DB_NAME = 'DataViewerDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'settings';
+        const DATA_KEY = 'csvData';
+        const SETTINGS_KEY = 'fieldSettings';
+
+        let dbInstance = null;
+        function getDB() {
+            if (dbInstance) return Promise.resolve(dbInstance);
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                request.onsuccess = (e) => {
+                    dbInstance = e.target.result;
+                    resolve(dbInstance);
+                };
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        // Debounced Save
+        let saveTimeout = null;
+        async function saveDataToDB(data) {
+            if (isInitialLoading) return; // CRITICAL: Stop auto-save during startup
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                try {
+                    const db = await getDB();
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    tx.objectStore(STORE_NAME).put(data, DATA_KEY);
+                } catch (e) {
+                    console.error('Failed to save data:', e);
+                }
+            }, 1000);
+        }
+
+        async function saveSettingsToDB(settings) {
+            if (isInitialLoading) return;
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).put(settings, SETTINGS_KEY);
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+            }
+        }
+
+        async function loadDataFromDB() {
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+
+                const dataReq = store.get(DATA_KEY);
+                dataReq.onsuccess = () => {
+                    if (dataReq.result) {
+                        document.getElementById('dataInput').value = dataReq.result;
+
+                        const settingsReq = store.get(SETTINGS_KEY);
+                        settingsReq.onsuccess = () => {
+                            if (settingsReq.result) {
+                                selectedFieldStates = settingsReq.result;
+                                if (selectedFieldStates._referenceDate) {
+                                    document.getElementById('referenceDate').value = selectedFieldStates._referenceDate;
+                                } else {
+                                    setToToday();
+                                }
+                                if (selectedFieldStates._backwardYearsX) {
+                                    document.getElementById('backwardYearsX').value = selectedFieldStates._backwardYearsX;
+                                }
+                            } else {
+                                setToToday();
+                            }
+                            isInitialLoading = false;
+                            generateTimeline();
+                        };
+                        settingsReq.onerror = () => {
+                            setToToday();
+                            isInitialLoading = false;
+                            generateTimeline();
+                        };
+                    } else {
+                        setToToday();
+                        isInitialLoading = false;
+                    }
+                };
+                dataReq.onerror = () => { isInitialLoading = false; };
+            } catch (e) {
+                console.error('Failed to load data:', e);
+                isInitialLoading = false;
+            }
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else current += char;
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function parseJapaneseDate(text) {
+            if (!text) return null;
+            // Match Sxx.m, Hxx.m, Rxx.m or yyyy.m with common separators
+            const match = text.match(/([SRH]?)(\d+)[年./-]?(\d+)/);
+            if (!match) return null;
+
+            const era = match[1];
+            const yearNum = parseInt(match[2]);
+            const month = parseInt(match[3]);
+            if (month < 1 || month > 12) return null;
+
+            let christianYear = yearNum;
+            if (era === 'R') christianYear = 2018 + yearNum;
+            else if (era === 'H') christianYear = 1988 + yearNum;
+            else if (era === 'S') christianYear = 1925 + yearNum;
+
+            return { year: christianYear, month, label: toEraLabel(christianYear, month) };
+        }
+
+        function toEraLabel(year, month) {
+            if (year > 2019 || (year === 2019 && month >= 5)) return `R${year - 2018}.${month}`;
+            if (year > 1989 || (year === 1989 && month >= 1)) return `H${year - 1988}.${month}`;
+            if (year > 1926 || (year === 1926 && month >= 12)) return `S${year - 1925}.${month}`;
+            return `${year}.${month}`;
+        }
+
+        function getTotalMonths(dateObj) {
+            return dateObj.year * 12 + (dateObj.month - 1);
+        }
+
+        function fromTotalMonths(total) {
+            const year = Math.floor(total / 12);
+            const month = (total % 12) + 1;
+            return { year, month, label: toEraLabel(year, month) };
+        }
+
+        function parseInputData(input) {
+            const lines = input.trim().split('\n').filter(line => line.trim());
+            if (lines.length === 0) return [];
+            let eavCount = 0;
+            let sampleLines = lines.filter(l => l.includes(','));
+            let sampleSize = Math.min(sampleLines.length, 5);
+            for (let i = 0; i < sampleSize; i++) {
+                const parts = parseCSVLine(sampleLines[i]);
+                if (parts.length >= 2 && parseJapaneseDate(parts[0])) eavCount++;
+            }
+            console.log('Detected format:', eavCount > 0 ? 'EAV' : 'WIDE', { eavCount });
+            if (eavCount > 0) {
+                const peopleMap = new Map();
+                lines.forEach(line => {
+                    const row = parseCSVLine(line);
+                    if (row.length < 2) return;
+                    const dateParsed = parseJapaneseDate(row[0]);
+                    if (!dateParsed) return;
+                    const name = row[1], attr = (row[2] || "未分類").trim();
+                    let val = (row[3] || "").trim();
+                    if (val === "") val = attr;
+                    if (!peopleMap.has(name)) peopleMap.set(name, { name, events: [] });
+                    peopleMap.get(name).events.push({ date: row[0], attr, val });
+                });
+                return Array.from(peopleMap.values()).map(p => ({ _type: 'EAV', name: p.name, events: p.events }));
+            } else {
+                const headers = parseCSVLine(lines[0]);
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = parseCSVLine(lines[i]), obj = { _type: 'WIDE' };
+                    headers.forEach((h, idx) => { if (h) obj[h] = values[idx] || ''; });
+                    data.push(obj);
+                }
+                return data;
+            }
+        }
+
         function findNameField(data) {
             if (data.length === 0) return null;
             const keys = Object.keys(data[0]);
-            // Look for fields containing '名前' or 'name' (case insensitive)
-            return keys.find(key =>
-                key.includes('名前') ||
-                key.toLowerCase().includes('name')
-            ) || keys[0]; // Fallback to first field if no name field found
+            return keys.find(k => k.includes('名前') || k.toLowerCase().includes('name')) || keys[0];
         }
 
-        // Generate available fields from data
         function generateAvailableFields(data) {
             if (data.length === 0) return [];
-
-            nameFieldKey = findNameField(data);
-            const fields = [];
             const allKeys = new Set();
-
-            // Collect all unique keys from all records
-            data.forEach(record => {
-                Object.keys(record).forEach(key => {
-                    // Exclude the name field from selectable fields
-                    if (key !== nameFieldKey) {
-                        allKeys.add(key);
-                    }
-                });
-            });
-
-            // Create field objects - all fields default to true (selected)
-            Array.from(allKeys).forEach(key => {
-                fields.push({
-                    key: key,
-                    label: key,
-                    default: true
-                });
-            });
-
+            if (data[0]._type === 'EAV') {
+                nameFieldKey = 'name';
+                data.forEach(r => r.events.forEach(e => { if (e.attr) allKeys.add(e.attr.trim()); }));
+            } else {
+                nameFieldKey = findNameField(data);
+                data.forEach(r => Object.keys(r).forEach(k => {
+                    if (k !== nameFieldKey && k !== '_type' && k.trim() && k.trim() !== 'undefined') allKeys.add(k.trim());
+                }));
+            }
+            const fields = Array.from(allKeys).sort().map(key => ({
+                key, label: key, default: selectedFieldStates[key] !== undefined ? selectedFieldStates[key] : true
+            }));
+            console.log('Available fields:', fields.map(f => f.key));
             return fields;
         }
 
-        // Initialize field selector
         function initFieldSelector() {
             const selector = document.getElementById('fieldSelector');
             selector.innerHTML = '';
-
             if (availableFields.length === 0) {
-                selector.innerHTML = '<p style="color: #a0aec0; font-style: italic;">データを読み込むとフィールドが表示されます</p>';
+                selector.innerHTML = '<p style="color: #a0aec0; font-style: italic;">データを読み込むと項目がここに表示されます</p>';
                 return;
             }
-
             availableFields.forEach(field => {
                 const div = document.createElement('div');
                 div.className = 'checkbox-item';
-
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.id = `field_${field.key}`;
-                checkbox.value = field.key;
                 checkbox.checked = field.default;
-
                 const label = document.createElement('label');
-                label.htmlFor = `field_${field.key}`;
+                label.htmlFor = checkbox.id;
                 label.textContent = field.label;
-
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 selector.appendChild(div);
 
-                div.addEventListener('click', (e) => {
-                    if (e.target !== checkbox) {
-                        checkbox.checked = !checkbox.checked;
-                        generateTimeline(true);
-                    }
-                });
-
                 checkbox.addEventListener('change', () => {
+                    console.log(`Field ${field.key} changed to ${checkbox.checked}`);
+                    selectedFieldStates[field.key] = checkbox.checked;
+
+                    // 基準日と遡り年数も保存対象に含める
+                    selectedFieldStates._referenceDate = document.getElementById('referenceDate').value;
+                    selectedFieldStates._backwardYearsX = document.getElementById('backwardYearsX').value;
+
+                    saveSettingsToDB(selectedFieldStates);
                     generateTimeline(true);
                 });
             });
         }
 
-        // Get selected fields
-        function getSelectedFields() {
-            return availableFields.filter(field => {
-                const checkbox = document.getElementById(`field_${field.key}`);
-                return checkbox && checkbox.checked;
-            });
-        }
-
-        // Parse input data (CSV or JSON)
-        function parseInputData(input) {
-            input = input.trim();
-
-            // Try to parse as JSON
-            if (input.startsWith('[') || input.startsWith('{')) {
-                try {
-                    const data = JSON.parse(input);
-                    return Array.isArray(data) ? data : [data];
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                }
-            }
-
-            // Parse as CSV
-            const lines = input.split('\n').filter(line => line.trim());
-            if (lines.length < 2) return [];
-
-            const headers = parseCSVLine(lines[0]);
-            const data = [];
-
-            for (let i = 1; i < lines.length; i++) {
-                const values = parseCSVLine(lines[i]);
-                const obj = {};
-                headers.forEach((header, index) => {
-                    obj[header] = values[index] || '';
-                });
-                data.push(obj);
-            }
-
-            return data;
-        }
-
-        // Parse CSV line (handles quoted values)
-        function parseCSVLine(line) {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    result.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-
-            result.push(current.trim());
-            return result;
-        }
-
-        // Helper to parse Reiwa dates like "R6.4", "R6年4月", etc. to {year, month}
-        function parseReiwaDate(text) {
-            const match = text.match(/R(\d+)[年.](\d+)/);
-            if (!match) return null;
-            const reiwaYear = parseInt(match[1]);
-            const month = parseInt(match[2]);
-            // Reiwa 1 is 2019
-            const christianYear = 2018 + reiwaYear;
-            return { year: christianYear, month: month, label: `R${reiwaYear}.${month}` };
-        }
-
-        // Helper to get total months from a base (e.g., AD 0)
-        function getTotalMonths(dateObj) {
-            return dateObj.year * 12 + (dateObj.month - 1);
-        }
-
-        // Helper to convert total months back to Reiwa labels
-        function fromTotalMonths(total) {
-            const year = Math.floor(total / 12);
-            const month = (total % 12) + 1;
-            const reiwaYear = year - 2018;
-            return { year, month, label: `R${reiwaYear}.${month}` };
-        }
-
-        // Extract time periods from data (searches all fields for date patterns and fills gaps)
         function extractTimePeriods(data) {
             const foundMonths = [];
+            data.forEach(record => {
+                let datesToParse = [];
+                if (record._type === 'EAV') {
+                    record.events.forEach(e => {
+                        if (selectedFieldStates[e.attr.trim()] !== false) {
+                            datesToParse.push(e.date);
+                        }
+                    });
+                } else {
+                    // Check values AND enabled headers for dates
+                    Object.keys(record).forEach(k => {
+                        if (k === nameFieldKey || k === '_type') return;
+                        if (selectedFieldStates[k] === false) return;
 
-            data.forEach(person => {
-                const allValues = Object.values(person).join(' ');
-                const matches = allValues.match(/R\d+[年.]\d+/g) || [];
-                matches.forEach(m => {
-                    const parsed = parseReiwaDate(m);
-                    if (parsed) foundMonths.push(parsed);
-                });
+                        const p = parseJapaneseDate(k);
+                        if (p) foundMonths.push(p);
+
+                        const v = record[k];
+                        if (typeof v === 'string') {
+                            const ms = v.match(/[SRH]?\d+[年./-]\d+/g);
+                            if (ms) datesToParse.push(...ms);
+                        }
+                    });
+                }
+                datesToParse.forEach(d => { const p = parseJapaneseDate(d); if (p) foundMonths.push(p); });
             });
-
             if (foundMonths.length === 0) return [];
-
-            // Sort and find range
-            const monthIndices = foundMonths.map(m => getTotalMonths(m));
-            const minMonth = Math.min(...monthIndices);
-            const maxMonth = Math.max(...monthIndices);
-
-            // Fill all months in between to make it continuous
-            const periods = [];
-            for (let m = minMonth; m <= maxMonth; m++) {
-                periods.push(fromTotalMonths(m));
-            }
-
+            const indices = foundMonths.map(m => getTotalMonths(m));
+            const min = Math.min(...indices), max = Math.max(...indices), periods = [];
+            for (let m = min; m <= max; m++) periods.push(fromTotalMonths(m));
             return periods;
         }
 
-        // Load file
-        function loadFile(file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('dataInput').value = e.target.result;
-                // Auto-generate timeline after loading
-                generateTimeline();
-            };
-            reader.readAsText(file);
-        }
-
-        // Generate timeline table
         function generateTimeline(skipSelectorInit = false) {
+            console.log('Generating timeline...', { skipSelectorInit });
             const input = document.getElementById('dataInput').value;
-            if (!input.trim()) {
-                alert('データを入力してください');
-                return;
-            }
+            if (!input.trim()) return;
+
+            // Only save if it's not the initial DB load
+            if (!isInitialLoading) saveDataToDB(input);
 
             parsedData = parseInputData(input);
-            if (parsedData.length === 0) {
-                alert('データの解析に失敗しました');
-                return;
-            }
+            if (parsedData.length === 0) { return; }
 
-            // Generate available fields from data if not already done
             if (!skipSelectorInit) {
-                const newFields = generateAvailableFields(parsedData);
-                availableFields = newFields;
+                availableFields = generateAvailableFields(parsedData);
                 initFieldSelector();
             }
+            renderTimelineOnly();
+        }
 
-            const selectedFields = getSelectedFields();
-            const periods = extractTimePeriods(parsedData);
+        function renderTimelineOnly() {
+            console.log('Rendering timeline with', parsedData.length, 'people');
+            if (!parsedData || parsedData.length === 0) return;
+            if (!selectedFieldStates) selectedFieldStates = {};
 
-            // Generate header
-            const headerRow = document.getElementById('tableHeader');
-            headerRow.innerHTML = '<th class="name-cell">名前</th>';
-            periods.forEach(p => {
-                const th = document.createElement('th');
-                th.textContent = p.label;
-                headerRow.appendChild(th);
+            const refDateStr = document.getElementById('referenceDate').value;
+            const refDate = refDateStr ? new Date(refDateStr + 'T00:00:00') : new Date();
+            const refTs = refDate.getTime();
+            const yearsX = parseInt(document.getElementById('backwardYearsX').value) || 4;
+
+            // 基準日からN年前のタイムスタンプを計算
+            const getThresholdTs = (years) => {
+                const d = new Date(refTs);
+                d.setFullYear(d.getFullYear() - years);
+                return d.getTime();
+            };
+
+            const fiveYearsTs = getThresholdTs(5);
+            const xYearsTs = getThresholdTs(yearsX);
+
+            // フィルタリング
+            const filteredData = parsedData.filter(person => {
+                let latestTs = 0;
+                let shinukiShunoTs = null;
+
+                if (person._type === 'EAV') {
+                    person.events.forEach(ev => {
+                        const parsed = parseJapaneseDate(ev.date);
+                        if (!parsed) return;
+                        const d = new Date(parsed.year, parsed.month - 1, 1);
+                        const ts = d.getTime();
+                        if (ts > latestTs) latestTs = ts;
+
+                        if (ev.attr === '青年等就農計画推進会議' && ev.val === '新規就農') {
+                            if (shinukiShunoTs === null || ts > shinukiShunoTs) {
+                                shinukiShunoTs = ts;
+                            }
+                        }
+                    });
+                } else {
+                    // WIDE形式
+                    Object.keys(person).forEach(k => {
+                        if (k === nameFieldKey || k === '_type') return;
+                        const val = person[k];
+                        if (!val || val === '-') return;
+
+                        const dk = parseJapaneseDate(k); // カラム名が日付の場合
+                        if (dk) {
+                            const ts = new Date(dk.year, dk.month - 1, 1).getTime();
+                            if (ts > latestTs) latestTs = ts;
+                            // WIDE形式で特定のセルが「新規就農」を指す場合（項目名が「青年等就農計画推進会議」かつ値が「新規就農」）
+                            if (k === '青年等就農計画推進会議' && val === '新規就農') {
+                                if (shinukiShunoTs === null || ts > shinukiShunoTs) shinukiShunoTs = ts;
+                            }
+                        }
+
+                        // 値の中に日付が含まれる場合
+                        if (typeof val === 'string') {
+                            const dates = val.match(/[SRH]?\d+[年./-]\d+/g);
+                            if (dates) {
+                                dates.forEach(dstr => {
+                                    const parsed = parseJapaneseDate(dstr);
+                                    if (parsed) {
+                                        const ts = new Date(parsed.year, parsed.month - 1, 1).getTime();
+                                        if (ts > latestTs) latestTs = ts;
+                                        if (k === '青年等就農計画推進会議' && val.includes('新規就農')) {
+                                            if (shinukiShunoTs === null || ts > shinukiShunoTs) shinukiShunoTs = ts;
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+
+                if (shinukiShunoTs !== null) {
+                    // ケース1: 新規就農がある場合、5年以内
+                    return shinukiShunoTs >= fiveYearsTs && shinukiShunoTs <= refTs;
+                } else {
+                    // ケース2: 新規就農がない場合、最新記録がX年以内
+                    return latestTs >= xYearsTs && latestTs <= refTs;
+                }
             });
 
-            // Generate body
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
+            console.log('Filtered data size:', filteredData.length);
 
-            parsedData.forEach(person => {
-                const name = person[nameFieldKey] || '不明';
-                const row = document.createElement('tr');
+            try {
+                const periods = extractTimePeriods(filteredData);
+                const headerRow = document.getElementById('tableHeader');
+                headerRow.innerHTML = '<th class="name-cell">名前</th>';
+                periods.forEach(p => { const th = document.createElement('th'); th.textContent = p.label; headerRow.appendChild(th); });
 
-                // Name cell
-                const nameCell = document.createElement('td');
-                nameCell.className = 'name-cell';
-                nameCell.textContent = name;
-                row.appendChild(nameCell);
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
 
-                // Period cells
-                periods.forEach(p => {
-                    const cell = document.createElement('td');
-                    cell.className = 'timeline-cell';
+                if (filteredData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="100" class="no-data">表示基準に一致するデータがありません</td></tr>`;
+                    return;
+                }
 
-                    // Check if this person has activity in this specific period
-                    let hasActivityInThisMonth = false;
-                    Object.values(person).forEach(val => {
-                        if (typeof val !== 'string') return;
-                        const dateMatch = val.match(/R\d+[年.]\d+/g);
-                        if (dateMatch) {
-                            dateMatch.forEach(dm => {
-                                const parsedDM = parseReiwaDate(dm);
-                                if (parsedDM && parsedDM.label === p.label) {
-                                    hasActivityInThisMonth = true;
+                filteredData.forEach(person => {
+                    const row = document.createElement('tr');
+                    const nameCell = document.createElement('td');
+                    nameCell.className = 'name-cell';
+                    nameCell.textContent = person[nameFieldKey] || '不明';
+                    row.appendChild(nameCell);
+                    periods.forEach(p => {
+                        const cell = document.createElement('td');
+                        cell.className = 'timeline-cell';
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'cell-content';
+                        let hasContent = false;
+                        if (person._type === 'EAV') {
+                            person.events.filter(ev => {
+                                const parsed = parseJapaneseDate(ev.date);
+                                return parsed && parsed.label === p.label;
+                            }).forEach(ev => {
+                                if (ev.val && ev.val !== '-') {
+                                    const isVisible = selectedFieldStates[ev.attr.trim()] !== false;
+                                    if (isVisible) {
+                                        const itemDiv = document.createElement('div');
+                                        itemDiv.className = 'field-item';
+                                        itemDiv.innerHTML = `<div class="field-label">${ev.attr}</div><div class="field-value">${ev.val}</div>`;
+                                        contentDiv.appendChild(itemDiv);
+                                        hasContent = true;
+                                    }
+                                }
+                            });
+                        } else {
+                            // WIDE format Logic Improvement
+                            // 1. Log-style (Value contains date)
+                            const hasDateInMonth = Object.values(person).some(v => {
+                                if (typeof v !== 'string') return false;
+                                const ms = v.match(/[SRH]?\d+[年./-]\d+/g);
+                                return ms && ms.some(m => parseJapaneseDate(m)?.label === p.label);
+                            });
+
+                            availableFields.forEach(f => {
+                                if (selectedFieldStates[f.key] === false) return;
+                                const val = person[f.key];
+                                if (!val || val === '-') return;
+
+                                // 2. Cross-table-style (Field key is a date matching current column)
+                                const fieldDate = parseJapaneseDate(f.key);
+                                const isDateMatch = fieldDate && fieldDate.label === p.label;
+
+                                if (hasDateInMonth || isDateMatch) {
+                                    const itemDiv = document.createElement('div');
+                                    itemDiv.className = 'field-item';
+                                    const labelHtml = isDateMatch ? "" : `<div class="field-label">${f.key}</div>`;
+                                    itemDiv.innerHTML = `${labelHtml}<div class="field-value">${val}</div>`;
+                                    contentDiv.appendChild(itemDiv);
+                                    hasContent = true;
                                 }
                             });
                         }
+                        if (hasContent) cell.appendChild(contentDiv);
+                        row.appendChild(cell);
                     });
-
-                    if (hasActivityInThisMonth) {
-                        const contentDiv = document.createElement('div');
-                        contentDiv.className = 'cell-content';
-
-                        selectedFields.forEach(field => {
-                            const value = person[field.key];
-                            if (value && value !== '-') {
-                                const fieldDiv = document.createElement('div');
-                                fieldDiv.className = 'field-item';
-                                // Only show the value, no label
-                                fieldDiv.textContent = value;
-                                contentDiv.appendChild(fieldDiv);
-                            }
-                        });
-
-                        cell.appendChild(contentDiv);
-                    }
-
-                    row.appendChild(cell);
+                    tbody.appendChild(row);
                 });
 
-                tbody.appendChild(row);
-            });
-        }
+                // Sync Top Scrollbar Width
+                setTimeout(() => {
+                    const table = document.getElementById('timelineTable');
+                    const dummy = document.getElementById('topScrollDummy');
+                    const topScroll = document.getElementById('topScrollContainer');
+                    const bottomScroll = document.querySelector('.timeline-container');
 
+                    dummy.style.width = table.offsetWidth + 'px';
 
-
-        // Clear all data
-        function clearData() {
-            if (confirm('すべてのデータをクリアしますか？')) {
-                document.getElementById('dataInput').value = '';
-                document.getElementById('fieldSelector').innerHTML = '<p style="color: #a0aec0; font-style: italic;">データを読み込むとフィールドが表示されます</p>';
-                document.getElementById('tableHeader').innerHTML = '';
-                document.getElementById('tableBody').innerHTML = '<tr><td colspan="100" class="no-data">データを入力して「タイムテーブル生成」ボタンをクリックしてください</td></tr>';
-                parsedData = [];
-                availableFields = [];
+                    // Auto-scroll to the end (right) on initial render/update
+                    topScroll.scrollLeft = topScroll.scrollWidth;
+                    bottomScroll.scrollLeft = bottomScroll.scrollWidth;
+                }, 0);
+            } catch (e) {
+                console.error('Render error:', e);
             }
         }
 
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            initFieldSelector();
+        async function clearData() {
+            if (!confirm('保存されているすべてのデータを削除しますか？')) return;
+            document.getElementById('dataInput').value = '';
+            document.getElementById('fieldSelector').innerHTML = '<p style="color: #a0aec0; font-style: italic;">データを読み込むと項目が表示されます</p>';
+            document.getElementById('fieldSelector').dataset.lastKeys = '';
+            document.getElementById('tableHeader').innerHTML = '';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="100" class="no-data">上にデータを入力すると、自動的にタイムテーブルが生成されます</td></tr>';
+            parsedData = []; availableFields = []; selectedFieldStates = {};
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).delete(DATA_KEY);
+                tx.objectStore(STORE_NAME).delete(SETTINGS_KEY);
+            } catch (e) {
+                console.error('Failed to clear data:', e);
+            }
+        }
 
-            // File input handler
+        function copyTableAsCSV(btn) {
+            const header = Array.from(document.querySelectorAll('#tableHeader th')).map(th => th.textContent);
+            const rows = Array.from(document.querySelectorAll('#tableBody tr'));
+
+            let csv = header.map(h => `"${h.replace(/"/g, '""')}"`).join(',') + '\n';
+
+            rows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td'));
+                const rowData = cells.map(td => {
+                    // Extract text content from all items in the cell
+                    const items = Array.from(td.querySelectorAll('.field-item')).map(item => {
+                        const label = item.querySelector('.field-label')?.textContent || '';
+                        const val = item.querySelector('.field-value')?.textContent || '';
+                        return label ? `${label}:${val}` : val;
+                    });
+                    const text = items.length > 0 ? items.join(' | ') : td.textContent;
+                    return `"${text.replace(/"/g, '""')}"`;
+                });
+                csv += rowData.join(',') + '\n';
+            });
+
+            navigator.clipboard.writeText(csv).then(() => {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ コピー完了！';
+                btn.style.background = '#38a169';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#48bb78';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy CSV:', err);
+                alert('コピーに失敗しました。詳細はコンソールを確認してください。');
+            });
+        }
+
+        function setToToday() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('referenceDate').value = `${yyyy}-${mm}-${dd}`;
+
+            if (!isInitialLoading) {
+                if (selectedFieldStates) {
+                    selectedFieldStates._referenceDate = document.getElementById('referenceDate').value;
+                    saveSettingsToDB(selectedFieldStates);
+                }
+                generateTimeline(true);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDataFromDB();
             document.getElementById('fileInput').addEventListener('change', function (e) {
+                isInitialLoading = false; // User started interaction
                 const file = e.target.files[0];
                 if (file) {
-                    loadFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        document.getElementById('dataInput').value = ev.target.result;
+                        generateTimeline();
+                    };
+                    reader.readAsText(file);
+                    e.target.value = ''; // Reset to allow re-selection of the same file
                 }
+            });
+            document.getElementById('dataInput').addEventListener('dblclick', () => {
+                document.getElementById('fileInput').click();
+            });
+            // Live save and render on input
+            let renderTimeout = null;
+            document.getElementById('dataInput').addEventListener('input', (e) => {
+                const val = e.target.value;
+                saveDataToDB(val);
+                if (renderTimeout) clearTimeout(renderTimeout);
+                renderTimeout = setTimeout(() => {
+                    generateTimeline();
+                }, 500); // Faster update (0.5s)
+            });
+
+            // Sync Scrolling
+            const topScroll = document.getElementById('topScrollContainer');
+            const bottomScroll = document.querySelector('.timeline-container');
+
+            topScroll.addEventListener('scroll', () => {
+                bottomScroll.scrollLeft = topScroll.scrollLeft;
+            });
+            bottomScroll.addEventListener('scroll', () => {
+                topScroll.scrollLeft = bottomScroll.scrollLeft;
             });
         });
     </script>
