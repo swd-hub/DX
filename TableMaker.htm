@@ -479,12 +479,21 @@
                             同じ名前・項目・内容のデータが複数年月日ある場合、最も古い日付のみ残す（チェック時）
                         </label>
                         <div style="margin-top: 10px; font-size: 0.85rem; color: #666;">
-                            ※ チェック OFF にするとすべてのデータを保持し、「頻度」表示で複数件がカウントされます
+                            ※ チェック OFF にするとすべてのデータを保持し、「頻度」をカウントできます
                         </div>
                         <div style="margin-top: 15px; font-size: 0.9rem; color: #334155;">
-                            <strong>表に表示する基準：</strong>
-                            <input type="date" id="latestDateLimit" onchange="renderTable()" style="padding: 5px;">
-                            <span>より後に、一度でも記録がある「名前（対象）」だけを表示する</span>
+                            <strong>表示判定の基準：</strong><br>
+                            基準日: <input type="date" id="latestDateLimit" onchange="renderTable()"
+                                style="padding: 5px; margin-bottom: 5px;">
+                            <button type="button" class="btn btn-sm btn-info" onclick="setToToday()"
+                                style="padding: 2px 8px; margin-left: 5px; vertical-align: middle;">今日の日付</button>
+                            <br>
+                            新規就農日がない場合の遡り年数(X): <input type="number" id="backwardYearsZ" value="4" min="1"
+                                onchange="renderTable()" style="padding: 5px; width: 60px;"> 年
+                            <div style="margin-top: 8px; font-size: 0.8rem; color: #666; line-height: 1.4;">
+                                ※「青年等就農計画推進会議」の「新規就農」がある場合は認定日が基準日より青年等就農計画期間の5年以内、<br>
+                                　無い場合は最も新しい記録が基準日よりX年以内(初期設定：就農準備年数3年+再支援開始1年の4年)の対象者を表示します。
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -583,20 +592,18 @@
         }
 
         function initializeDefaultDateLimit() {
+            setToToday();
+        }
+
+        function setToToday() {
             const today = new Date();
-            const currentYear = today.getFullYear();
-            const currentMonth = today.getMonth() + 1;
-            const currentDay = today.getDate();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
 
-            // 1年以上前の最も新しい04/01を計算
-            let targetYear = currentYear - 1;
-
-            if (currentMonth < 4 || (currentMonth === 4 && currentDay < 1)) {
-                targetYear = currentYear - 2;
-            }
-
-            const defaultDate = `${targetYear}-04-01`;
+            const defaultDate = `${yyyy}-${mm}-${dd}`;
             document.getElementById('latestDateLimit').value = defaultDate;
+            if (rawRecords.length > 0) renderTable();
         }
 
         function openIDB() {
@@ -614,6 +621,7 @@
                     csvInput: document.getElementById('csvInput').value,
                     tableTitle: document.getElementById('tableTitle').value,
                     latestDateLimit: document.getElementById('latestDateLimit').value,
+                    backwardYearsZ: document.getElementById('backwardYearsZ').value,
                     enableDedup: document.getElementById('enableDedup').checked,
                     currentFontSize,
                     printOrientation,
@@ -636,6 +644,7 @@
                     document.getElementById('csvInput').value = state.csvInput || '';
                     document.getElementById('tableTitle').value = state.tableTitle || '';
                     if (state.latestDateLimit) document.getElementById('latestDateLimit').value = state.latestDateLimit;
+                    if (state.backwardYearsZ) document.getElementById('backwardYearsZ').value = state.backwardYearsZ;
                     if (typeof state.enableDedup === 'boolean') document.getElementById('enableDedup').checked = state.enableDedup;
                     if (state.currentFontSize) {
                         currentFontSize = state.currentFontSize;
@@ -963,18 +972,42 @@
             const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
             const dateLimitValue = document.getElementById('latestDateLimit').value;
             const dateLimitTs = dateLimitValue ? new Date(dateLimitValue + 'T00:00:00').getTime() : 0;
+            const zYears = parseInt(document.getElementById('backwardYearsZ').value) || 2;
 
             const grouped = {};
             rawRecords.forEach(r => {
-                if (!grouped[r.name]) grouped[r.name] = { items: {}, maxTs: 0 };
+                if (!grouped[r.name]) grouped[r.name] = { items: {}, maxTs: 0, shinukiShunoTs: null };
                 if (!grouped[r.name].items[r.item]) grouped[r.name].items[r.item] = [];
                 grouped[r.name].items[r.item].push(r);
                 if (r.ts > grouped[r.name].maxTs) grouped[r.name].maxTs = r.ts;
+
+                // 新規就農の日付を追跡
+                if (r.item === '青年等就農計画推進会議' && r.content === '新規就農') {
+                    if (grouped[r.name].shinukiShunoTs === null || r.ts > grouped[r.name].shinukiShunoTs) {
+                        grouped[r.name].shinukiShunoTs = r.ts;
+                    }
+                }
             });
 
+            // 基準日からN年前のタイムスタンプを取得する関数
+            const getThresholdTs = (years) => {
+                const d = new Date(dateLimitTs);
+                d.setFullYear(d.getFullYear() - years);
+                return d.getTime();
+            };
+
+            const fiveYearsTs = getThresholdTs(5);
+            const zYearsTs = getThresholdTs(zYears);
+
             let names = Object.keys(grouped).filter(name => {
-                const maxTs = grouped[name].maxTs;
-                return maxTs >= dateLimitTs;
+                const data = grouped[name];
+                if (data.shinukiShunoTs !== null) {
+                    // ケース1：新規就農がある場合、基準日から5年以内
+                    return data.shinukiShunoTs >= fiveYearsTs && data.shinukiShunoTs <= dateLimitTs;
+                } else {
+                    // ケース2：新規就農がない場合、最新の日付が基準日からZ年以内
+                    return data.maxTs >= zYearsTs && data.maxTs <= dateLimitTs;
+                }
             }).sort();
 
             const rows = names.map(name => {
