@@ -25,6 +25,9 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-right: 280px;
+            /* Space for right sidebar */
+            transition: margin-right 0.3s ease;
         }
 
         h1 {
@@ -295,6 +298,117 @@
             font-style: italic;
         }
 
+        /* 右サイドバー (名前リスト) */
+        #right-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            border-left: 1px solid #e2e8f0;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-header {
+            font-size: 1.1rem;
+            color: #2d3748;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .name-list-group {
+            margin-bottom: 20px;
+        }
+
+        .name-list-header {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #667eea;
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            position: sticky;
+            top: -20px;
+            z-index: 10;
+        }
+
+        .name-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            font-size: 0.9rem;
+            color: #4a5568;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .name-item:hover {
+            background: #f7fafc;
+        }
+
+        .name-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .furigana-hint {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            margin-left: 4px;
+        }
+
+        .right-sidebar-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1100;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            display: none;
+            font-size: 24px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                margin-right: 0;
+            }
+
+            #right-sidebar {
+                transform: translateX(100%);
+            }
+
+            #right-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .right-sidebar-toggle {
+                display: flex;
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -361,10 +475,13 @@
                 </div>
             </div>
 
-            <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+            <div style="margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn-primary" onclick="copyTableAsCSV(this)"
                     style="background: #48bb78; width: auto; padding: 8px 16px; font-size: 13px;">📋
-                    生成された表をCSVコピー</button>
+                    コピー</button>
+                <button class="btn-primary" onclick="downloadTableAsCSV(this)"
+                    style="background: #3182ce; width: auto; padding: 8px 16px; font-size: 13px;">💾
+                    CSV保存</button>
             </div>
         </div>
 
@@ -390,11 +507,29 @@
         </div>
     </div>
 
+    <div id="right-sidebar">
+        <div class="sidebar-header">
+            <span>👤 名前の絞り込み</span>
+            <span id="nameDisplayCount"
+                style="font-size: 0.8rem; font-weight: normal; color: #718096; margin-left: auto;"></span>
+        </div>
+        <div style="margin-bottom: 15px; display: flex; gap: 8px;">
+            <button class="btn-small-clear" onclick="toggleAllNames(true)"
+                style="flex: 1; font-size: 11px; background: #667eea;">全選択</button>
+            <button class="btn-small-clear" onclick="toggleAllNames(false)"
+                style="flex: 1; font-size: 11px;">全解除</button>
+        </div>
+        <div id="nameFilterContainer"></div>
+    </div>
+
+    <button class="right-sidebar-toggle" onclick="toggleRightSidebar()">👤</button>
+
     <script>
         let availableFields = [];
         let parsedData = [];
         let nameFieldKey = null;
         let selectedFieldStates = {};
+        let selectedNames = new Set(); // Set of names to show
         let isInitialLoading = true; // Guard to prevent auto-save during loading
 
         // IndexedDB Configuration
@@ -473,6 +608,10 @@
                                 if (selectedFieldStates._backwardYearsX) {
                                     document.getElementById('backwardYearsX').value = selectedFieldStates._backwardYearsX;
                                 }
+                                if (Array.isArray(selectedFieldStates._selectedNames)) {
+                                    selectedNames = new Set(selectedFieldStates._selectedNames);
+                                    isFirstDataLoad = false; // 保存された設定がある場合は初回自動選択を無効化
+                                }
                             } else {
                                 setToToday();
                             }
@@ -546,6 +685,131 @@
             const year = Math.floor(total / 12);
             const month = (total % 12) + 1;
             return { year, month, label: toEraLabel(year, month) };
+        }
+
+        const FURIGANA_KEYWORDS = ['ふりがな', 'フリガナ', '読み', 'よみ', 'furigana', 'yomi'];
+
+        function isFuriganaField(itemName) {
+            const lower = (itemName || '').toLowerCase();
+            return FURIGANA_KEYWORDS.some(keyword => lower.includes(keyword));
+        }
+
+        function getFurigana(person) {
+            if (person._type === 'EAV') {
+                const ev = person.events.find(e => isFuriganaField(e.attr));
+                if (ev && ev.val && ev.val.trim()) return ev.val.trim();
+            } else {
+                const key = Object.keys(person).find(k => isFuriganaField(k));
+                if (key && person[key] && person[key].trim()) return person[key].trim();
+            }
+            return person.name || '';
+        }
+
+        function getFuriganaGroup(furigana) {
+            if (!furigana) return '他';
+            const firstChar = furigana.trim().charAt(0);
+            const code = firstChar.charCodeAt(0);
+
+            if ((code >= 0x3041 && code <= 0x3096) || (code >= 0x30A1 && code <= 0x30FA)) {
+                const char = firstChar.replace(/[ァ-ヶ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60));
+                if ('あいうえお'.includes(char)) return 'あ行';
+                if ('かきくけこがぎぐげご'.includes(char)) return 'か行';
+                if ('さしすせそざじずぜぞ'.includes(char)) return 'さ行';
+                if ('たちつてとだぢづでど'.includes(char)) return 'た行';
+                if ('なにぬねの'.includes(char)) return 'な行';
+                if ('はひふへほばびぶべぼぱぴぷぺぽ'.includes(char)) return 'は行';
+                if ('まみむめも'.includes(char)) return 'ま行';
+                if ('やゆよ'.includes(char)) return 'や行';
+                if ('らりるれろ'.includes(char)) return 'ら行';
+                if ('わをん'.includes(char)) return 'わ行';
+            }
+            if (/[a-zA-Z]/.test(firstChar)) return firstChar.toUpperCase();
+            return '他';
+        }
+
+        function toggleRightSidebar() {
+            document.getElementById('right-sidebar').classList.toggle('open');
+        }
+
+        function clearNameFilter() {
+            // リセットボタン：全員を選択状態に戻す
+            selectedNames.clear();
+            parsedData.forEach(p => selectedNames.add(p.name));
+            saveSettings();
+            renderNameFilter();
+            renderTimelineOnly();
+        }
+
+        function toggleAllNames(checked) {
+            if (checked) {
+                parsedData.forEach(p => selectedNames.add(p.name));
+            } else {
+                selectedNames.clear();
+            }
+            saveSettings();
+            renderNameFilter();
+            renderTimelineOnly();
+        }
+
+        function saveSettings() {
+            selectedFieldStates._selectedNames = Array.from(selectedNames);
+            selectedFieldStates._referenceDate = document.getElementById('referenceDate').value;
+            selectedFieldStates._backwardYearsX = document.getElementById('backwardYearsX').value;
+            saveSettingsToDB(selectedFieldStates);
+        }
+
+        function renderNameFilter() {
+            const container = document.getElementById('nameFilterContainer');
+            if (parsedData.length === 0) {
+                container.innerHTML = '<p style="font-size:0.8rem; color:#a0aec0;">データがありません</p>';
+                return;
+            }
+
+            const groups = {};
+            parsedData.forEach(person => {
+                const furigana = getFurigana(person);
+                const groupName = getFuriganaGroup(furigana);
+                if (!groups[groupName]) groups[groupName] = [];
+                groups[groupName].push({ name: person.name, furigana });
+            });
+
+            // Name sorting within group
+            Object.values(groups).forEach(g => g.sort((a, b) => a.furigana.localeCompare(b.furigana, 'ja')));
+
+            const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
+                const order = ['あ行', 'か行', 'さ行', 'た行', 'な行', 'は行', 'ま行', 'や行', 'ら行', 'わ行', '他'];
+                const idxA = order.indexOf(a);
+                const idxB = order.indexOf(b);
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+                return a.localeCompare(b);
+            });
+
+            container.innerHTML = sortedGroupKeys.map(groupKey => `
+                <div class="name-list-group">
+                    <div class="name-list-header">${groupKey}</div>
+                    ${groups[groupKey].map(item => `
+                        <label class="name-item">
+                            <input type="checkbox" ${selectedNames.has(item.name) ? 'checked' : ''} 
+                                   onchange="toggleNameSelection('${item.name.replace(/'/g, "\\'")}', this.checked)">
+                            <span>${item.name}${item.furigana !== item.name ? `<span class="furigana-hint">(${item.furigana})</span>` : ''}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        function toggleNameSelection(name, checked) {
+            if (checked) {
+                selectedNames.add(name);
+            } else {
+                selectedNames.delete(name);
+            }
+
+            saveSettings();
+            renderTimelineOnly();
+            // Don't full re-render sidebar to avoid losing scroll or focus if we had many
         }
 
         function parseInputData(input) {
@@ -680,6 +944,7 @@
             return periods;
         }
 
+        let isFirstDataLoad = true;
         function generateTimeline(skipSelectorInit = false) {
             console.log('Generating timeline...', { skipSelectorInit });
             const input = document.getElementById('dataInput').value;
@@ -691,10 +956,17 @@
             parsedData = parseInputData(input);
             if (parsedData.length === 0) { return; }
 
+            // 初回読み込みかつフィルタ未保存の場合、全員を選択状態にする
+            if (isFirstDataLoad && selectedNames.size === 0) {
+                parsedData.forEach(p => selectedNames.add(p.name));
+                isFirstDataLoad = false;
+            }
+
             if (!skipSelectorInit) {
                 availableFields = generateAvailableFields(parsedData);
                 initFieldSelector();
             }
+            renderNameFilter();
             renderTimelineOnly();
         }
 
@@ -784,8 +1056,17 @@
 
             console.log('Filtered data size:', filteredData.length);
 
+            // Apply Name Filter
+            const finalData = filteredData.filter(p => selectedNames.has(p.name));
+
+            // 表示人数の更新
+            const countEl = document.getElementById('nameDisplayCount');
+            if (countEl) {
+                countEl.textContent = `${finalData.length} / ${parsedData.length} 名`;
+            }
+
             try {
-                const periods = extractTimePeriods(filteredData);
+                const periods = extractTimePeriods(finalData);
                 const headerRow = document.getElementById('tableHeader');
                 headerRow.innerHTML = '<th class="name-cell">名前</th>';
                 periods.forEach(p => { const th = document.createElement('th'); th.textContent = p.label; headerRow.appendChild(th); });
@@ -793,12 +1074,12 @@
                 const tbody = document.getElementById('tableBody');
                 tbody.innerHTML = '';
 
-                if (filteredData.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="100" class="no-data">表示基準に一致するデータがありません</td></tr>`;
+                if (finalData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="100" class="no-data">表示基準または名前の選択に一致するデータがありません</td></tr>`;
                     return;
                 }
 
-                filteredData.forEach(person => {
+                finalData.forEach(person => {
                     const row = document.createElement('tr');
                     const nameCell = document.createElement('td');
                     nameCell.className = 'name-cell';
@@ -896,7 +1177,7 @@
             }
         }
 
-        function copyTableAsCSV(btn) {
+        function getCSVContent() {
             const header = Array.from(document.querySelectorAll('#tableHeader th')).map(th => th.textContent);
             const rows = Array.from(document.querySelectorAll('#tableBody tr'));
 
@@ -904,8 +1185,8 @@
 
             rows.forEach(row => {
                 const cells = Array.from(row.querySelectorAll('td'));
+                if (cells.length === 1 && cells[0].classList.contains('no-data')) return;
                 const rowData = cells.map(td => {
-                    // Extract text content from all items in the cell
                     const items = Array.from(td.querySelectorAll('.field-item')).map(item => {
                         const label = item.querySelector('.field-label')?.textContent || '';
                         const val = item.querySelector('.field-value')?.textContent || '';
@@ -916,7 +1197,11 @@
                 });
                 csv += rowData.join(',') + '\n';
             });
+            return csv;
+        }
 
+        function copyTableAsCSV(btn) {
+            const csv = getCSVContent();
             navigator.clipboard.writeText(csv).then(() => {
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '✅ コピー完了！';
@@ -927,8 +1212,42 @@
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy CSV:', err);
-                alert('コピーに失敗しました。詳細はコンソールを確認してください。');
+                alert('コピーに失敗しました。');
             });
+        }
+
+        function downloadTableAsCSV(btn) {
+            const csv = getCSVContent();
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+
+            const now = new Date();
+            const timestamp = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0');
+
+            const fileName = `タイムテーブル_${timestamp}.csv`;
+
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ 保存完了！';
+                btn.style.background = '#2b6cb0';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#3182ce';
+                }, 2000);
+            }
         }
 
         function setToToday() {
