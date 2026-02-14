@@ -1069,7 +1069,13 @@
                 const periods = extractTimePeriods(finalData);
                 const headerRow = document.getElementById('tableHeader');
                 headerRow.innerHTML = '<th class="name-cell">名前</th>';
-                periods.forEach(p => { const th = document.createElement('th'); th.textContent = p.label; headerRow.appendChild(th); });
+                periods.forEach(p => {
+                    const th = document.createElement('th');
+                    // 西暦の月も1桁の場合は0埋めする (2025/01形式)
+                    const westernLabel = `${p.year}/${String(p.month).padStart(2, '0')}`;
+                    th.textContent = `${p.label} (${westernLabel})`;
+                    headerRow.appendChild(th);
+                });
 
                 const tbody = document.getElementById('tableBody');
                 tbody.innerHTML = '';
