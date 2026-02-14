@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>就農支援タイムテーブル</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Meirio, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-size: 28px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .controls {
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls h2::before {
+            content: "⚙️";
+            font-size: 20px;
+        }
+
+        .field-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .checkbox-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            color: #2d3748;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .data-input {
+            margin-bottom: 20px;
+        }
+
+        .data-input h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .timeline-container {
+            overflow-x: auto;
+            margin-top: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .timeline-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            min-width: 800px;
+        }
+
+        .timeline-table th,
+        .timeline-table td {
+            padding: 15px;
+            text-align: left;
+            border: 1px solid #e2e8f0;
+        }
+
+        .timeline-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .timeline-table thead th:first-child {
+            border-top-left-radius: 15px;
+        }
+
+        .timeline-table thead th:last-child {
+            border-top-right-radius: 15px;
+        }
+
+        .timeline-table tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .timeline-table tbody tr:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+
+        .name-cell {
+            font-weight: 600;
+            color: #2d3748;
+            background: #f7fafc;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+
+        .timeline-cell {
+            min-width: 150px;
+            font-size: 13px;
+            color: #4a5568;
+            vertical-align: top;
+        }
+
+        .cell-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .field-item {
+            padding: 5px 10px;
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .field-label {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+
+        .field-value {
+            color: #2d3748;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .field-selector {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🌾 就農支援タイムテーブル</h1>
+
+        <div class="controls">
+            <div class="data-input">
+                <h3>💾 indexDATABASE / 📋 データ入力</h3>
+                <input type="file" id="fileInput" accept=".csv,.json,.txt" style="display: none;" />
+                <textarea id="dataInput"
+                    placeholder="IndexedDBから読み込まれたデータがここに表示されます...\n\nまたはCSVまたはJSON形式のデータを貼り付けてください...\n\nまたはダブルクリックでファイルを読み込み"
+                    ondblclick="document.getElementById('fileInput').click()"></textarea>
+            </div>
+
+
+
+            <h2>表示項目設定</h2>
+            <div class="field-selector" id="fieldSelector"></div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="generateTimeline()">📊 タイムテーブル生成</button>
+            <button class="btn-secondary" onclick="clearData()">🧹 クリア</button>
+        </div>
+
+        <div class="timeline-container">
+            <table class="timeline-table" id="timelineTable">
+                <thead>
+                    <tr id="tableHeader"></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="100" class="no-data">データを入力して「タイムテーブル生成」ボタンをクリックしてください</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Available fields for display (dynamically generated from data)
+        let availableFields = [];
+        let parsedData = [];
+        let nameFieldKey = null; // Dynamically detected name field
+
+        // Find the name field from data (looks for fields containing '名前' or 'name')
+        function findNameField(data) {
+            if (data.length === 0) return null;
+            const keys = Object.keys(data[0]);
+            // Look for fields containing '名前' or 'name' (case insensitive)
+            return keys.find(key =>
+                key.includes('名前') ||
+                key.toLowerCase().includes('name')
+            ) || keys[0]; // Fallback to first field if no name field found
+        }
+
+        // Generate available fields from data
+        function generateAvailableFields(data) {
+            if (data.length === 0) return [];
+
+            nameFieldKey = findNameField(data);
+            const fields = [];
+            const allKeys = new Set();
+
+            // Collect all unique keys from all records
+            data.forEach(record => {
+                Object.keys(record).forEach(key => {
+                    // Exclude the name field from selectable fields
+                    if (key !== nameFieldKey) {
+                        allKeys.add(key);
+                    }
+                });
+            });
+
+            // Create field objects - all fields default to true (selected)
+            Array.from(allKeys).forEach(key => {
+                fields.push({
+                    key: key,
+                    label: key,
+                    default: true
+                });
+            });
+
+            return fields;
+        }
+
+        // Initialize field selector
+        function initFieldSelector() {
+            const selector = document.getElementById('fieldSelector');
+            selector.innerHTML = '';
+
+            if (availableFields.length === 0) {
+                selector.innerHTML = '<p style="color: #a0aec0; font-style: italic;">データを読み込むとフィールドが表示されます</p>';
+                return;
+            }
+
+            availableFields.forEach(field => {
+                const div = document.createElement('div');
+                div.className = 'checkbox-item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `field_${field.key}`;
+                checkbox.value = field.key;
+                checkbox.checked = field.default;
+
+                const label = document.createElement('label');
+                label.htmlFor = `field_${field.key}`;
+                label.textContent = field.label;
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                selector.appendChild(div);
+
+                div.addEventListener('click', (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        generateTimeline(true);
+                    }
+                });
+
+                checkbox.addEventListener('change', () => {
+                    generateTimeline(true);
+                });
+            });
+        }
+
+        // Get selected fields
+        function getSelectedFields() {
+            return availableFields.filter(field => {
+                const checkbox = document.getElementById(`field_${field.key}`);
+                return checkbox && checkbox.checked;
+            });
+        }
+
+        // Parse input data (CSV or JSON)
+        function parseInputData(input) {
+            input = input.trim();
+
+            // Try to parse as JSON
+            if (input.startsWith('[') || input.startsWith('{')) {
+                try {
+                    const data = JSON.parse(input);
+                    return Array.isArray(data) ? data : [data];
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                }
+            }
+
+            // Parse as CSV
+            const lines = input.split('\n').filter(line => line.trim());
+            if (lines.length < 2) return [];
+
+            const headers = parseCSVLine(lines[0]);
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index] || '';
+                });
+                data.push(obj);
+            }
+
+            return data;
+        }
+
+        // Parse CSV line (handles quoted values)
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            result.push(current.trim());
+            return result;
+        }
+
+        // Helper to parse Reiwa dates like "R6.4", "R6年4月", etc. to {year, month}
+        function parseReiwaDate(text) {
+            const match = text.match(/R(\d+)[年.](\d+)/);
+            if (!match) return null;
+            const reiwaYear = parseInt(match[1]);
+            const month = parseInt(match[2]);
+            // Reiwa 1 is 2019
+            const christianYear = 2018 + reiwaYear;
+            return { year: christianYear, month: month, label: `R${reiwaYear}.${month}` };
+        }
+
+        // Helper to get total months from a base (e.g., AD 0)
+        function getTotalMonths(dateObj) {
+            return dateObj.year * 12 + (dateObj.month - 1);
+        }
+
+        // Helper to convert total months back to Reiwa labels
+        function fromTotalMonths(total) {
+            const year = Math.floor(total / 12);
+            const month = (total % 12) + 1;
+            const reiwaYear = year - 2018;
+            return { year, month, label: `R${reiwaYear}.${month}` };
+        }
+
+        // Extract time periods from data (searches all fields for date patterns and fills gaps)
+        function extractTimePeriods(data) {
+            const foundMonths = [];
+
+            data.forEach(person => {
+                const allValues = Object.values(person).join(' ');
+                const matches = allValues.match(/R\d+[年.]\d+/g) || [];
+                matches.forEach(m => {
+                    const parsed = parseReiwaDate(m);
+                    if (parsed) foundMonths.push(parsed);
+                });
+            });
+
+            if (foundMonths.length === 0) return [];
+
+            // Sort and find range
+            const monthIndices = foundMonths.map(m => getTotalMonths(m));
+            const minMonth = Math.min(...monthIndices);
+            const maxMonth = Math.max(...monthIndices);
+
+            // Fill all months in between to make it continuous
+            const periods = [];
+            for (let m = minMonth; m <= maxMonth; m++) {
+                periods.push(fromTotalMonths(m));
+            }
+
+            return periods;
+        }
+
+        // Load file
+        function loadFile(file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('dataInput').value = e.target.result;
+                // Auto-generate timeline after loading
+                generateTimeline();
+            };
+            reader.readAsText(file);
+        }
+
+        // Generate timeline table
+        function generateTimeline(skipSelectorInit = false) {
+            const input = document.getElementById('dataInput').value;
+            if (!input.trim()) {
+                alert('データを入力してください');
+                return;
+            }
+
+            parsedData = parseInputData(input);
+            if (parsedData.length === 0) {
+                alert('データの解析に失敗しました');
+                return;
+            }
+
+            // Generate available fields from data if not already done
+            if (!skipSelectorInit) {
+                const newFields = generateAvailableFields(parsedData);
+                availableFields = newFields;
+                initFieldSelector();
+            }
+
+            const selectedFields = getSelectedFields();
+            const periods = extractTimePeriods(parsedData);
+
+            // Generate header
+            const headerRow = document.getElementById('tableHeader');
+            headerRow.innerHTML = '<th class="name-cell">名前</th>';
+            periods.forEach(p => {
+                const th = document.createElement('th');
+                th.textContent = p.label;
+                headerRow.appendChild(th);
+            });
+
+            // Generate body
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            parsedData.forEach(person => {
+                const name = person[nameFieldKey] || '不明';
+                const row = document.createElement('tr');
+
+                // Name cell
+                const nameCell = document.createElement('td');
+                nameCell.className = 'name-cell';
+                nameCell.textContent = name;
+                row.appendChild(nameCell);
+
+                // Period cells
+                periods.forEach(p => {
+                    const cell = document.createElement('td');
+                    cell.className = 'timeline-cell';
+
+                    // Check if this person has activity in this specific period
+                    let hasActivityInThisMonth = false;
+                    Object.values(person).forEach(val => {
+                        if (typeof val !== 'string') return;
+                        const dateMatch = val.match(/R\d+[年.]\d+/g);
+                        if (dateMatch) {
+                            dateMatch.forEach(dm => {
+                                const parsedDM = parseReiwaDate(dm);
+                                if (parsedDM && parsedDM.label === p.label) {
+                                    hasActivityInThisMonth = true;
+                                }
+                            });
+                        }
+                    });
+
+                    if (hasActivityInThisMonth) {
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'cell-content';
+
+                        selectedFields.forEach(field => {
+                            const value = person[field.key];
+                            if (value && value !== '-') {
+                                const fieldDiv = document.createElement('div');
+                                fieldDiv.className = 'field-item';
+                                // Only show the value, no label
+                                fieldDiv.textContent = value;
+                                contentDiv.appendChild(fieldDiv);
+                            }
+                        });
+
+                        cell.appendChild(contentDiv);
+                    }
+
+                    row.appendChild(cell);
+                });
+
+                tbody.appendChild(row);
+            });
+        }
+
+
+
+        // Clear all data
+        function clearData() {
+            if (confirm('すべてのデータをクリアしますか？')) {
+                document.getElementById('dataInput').value = '';
+                document.getElementById('fieldSelector').innerHTML = '<p style="color: #a0aec0; font-style: italic;">データを読み込むとフィールドが表示されます</p>';
+                document.getElementById('tableHeader').innerHTML = '';
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="100" class="no-data">データを入力して「タイムテーブル生成」ボタンをクリックしてください</td></tr>';
+                parsedData = [];
+                availableFields = [];
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initFieldSelector();
+
+            // File input handler
+            document.getElementById('fileInput').addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    loadFile(file);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
