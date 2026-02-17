@@ -1415,8 +1415,18 @@
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
                 store.delete(DATA_KEY);
+                
+                // Complete the transaction before reload
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+                
+                // Reload the page to ensure clean state
+                location.reload();
             } catch (e) {
                 console.error('Failed to clear data:', e);
+                alert('データのクリアに失敗しました。ページを手動で再読み込みしてください。');
             }
         }
     </script>

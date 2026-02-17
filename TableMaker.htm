@@ -580,6 +580,53 @@
         let printOrientation = 'landscape';
         let draggedColIndex = null;
         let panelVisible = true;
+        let sortColumn = -1;
+        let sortDirection = 'asc'; // 'asc' or 'desc'
+
+        function sortTable(columnIndex) {
+            if (sortColumn === columnIndex) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = columnIndex;
+                sortDirection = 'asc';
+            }
+            renderTable();
+        }
+
+        function getSortIndicator(columnIndex) {
+            if (sortColumn !== columnIndex) return '';
+            return sortDirection === 'asc' ? ' ▲' : ' ▼';
+        }
+
+        function sortRows(rows, columnIndex, direction) {
+            return rows.sort((a, b) => {
+                let aVal = a[columnIndex];
+                let bVal = b[columnIndex];
+                
+                // 数値としてソートできる場合は数値として比較
+                const aNum = parseFloat(aVal);
+                const bNum = parseFloat(bVal);
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return direction === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                
+                // 日付としてソートできる場合は日付として比較
+                const aDate = parseJapaneseDate(aVal);
+                const bDate = parseJapaneseDate(bVal);
+                
+                if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
+                    return direction === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
+                }
+                
+                // 文字列として比較
+                if (direction === 'asc') {
+                    return aVal.localeCompare(bVal, 'ja');
+                } else {
+                    return bVal.localeCompare(aVal, 'ja');
+                }
+            });
+        }
 
         function togglePanelVisibility() {
             panelVisible = !panelVisible;
@@ -948,7 +995,7 @@
             <div class="column-filters">
                 <div><span>日付フィルタ</span><input type="text" value="${config.fDate}" placeholder="2025/01" oninput="headerConfigs[${i}].fDate=this.value; renderTable()"></div>
                 <div><span>頻度(以上)</span><input type="number" value="${config.fFreq}" min="1" oninput="headerConfigs[${i}].fFreq=parseInt(this.value); renderTable()"></div>
-                <div><span>内容フィルタ</span><input type="text" value="${config.fContent}" placeholder="キーワード" oninput="headerConfigs[${i}].fContent=this.value; renderTable()"></div>
+                <div><span>内容フィルタ</span><input type="text" value="${config.fContent}" placeholder="キーワード（スペース区切りでAND検索）" oninput="headerConfigs[${i}].fContent=this.value; renderTable()"></div>
             </div>
         </div>
     `).join('');
@@ -1076,7 +1123,13 @@
                     let items = grouped[name].items[c.raw] || [];
 
                     if (c.fDate) items = items.filter(it => it.date.includes(c.fDate));
-                    if (c.fContent) items = items.filter(it => it.content.includes(c.fContent));
+                    if (c.fContent) {
+                        const keywords = c.fContent.trim().split(/\s+/).filter(k => k.length > 0);
+                        items = items.filter(it => {
+                            const content = it.content.toLowerCase();
+                            return keywords.every(keyword => content.includes(keyword.toLowerCase()));
+                        });
+                    }
                     if (items.length === 0 || items.length < c.fFreq) return "-";
 
                     if (c.mode === 'freq') return items.length + " 回";
@@ -1132,14 +1185,22 @@
             ondragover="handleDragOver(event)" 
             ondrop="handleDrop(event, ${i})"
             ondragleave="handleDragLeave(event)"
-            style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;">
-            ${h}
+            onclick="sortTable(${i})"
+            style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem; cursor: pointer; user-select: none;"
+            title="クリックでソート">
+            ${h}${getSortIndicator(i)}
             <div class="resizer" onmousedown="startResize(event, ${globalIndex})"></div>
         </th>`;
             });
             html += `</tr></thead><tbody>`;
 
-            rows.forEach(r => {
+            // ソートを適用
+            let sortedRows = rows;
+            if (sortColumn >= 0 && sortColumn < rows.length) {
+                sortedRows = sortRows(rows, sortColumn, sortDirection);
+            }
+
+            sortedRows.forEach(r => {
                 html += `<tr>` + r.map((c, i) => {
                     const width = columnWidths[configIndices[i]] || 'auto';
                     return i === 0 ? `<td style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;"><strong>${c}</strong></td>` : `<td style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;">${c}</td>`;
