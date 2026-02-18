@@ -1130,14 +1130,32 @@
                             return keywords.every(keyword => content.includes(keyword.toLowerCase()));
                         });
                     }
-                    if (items.length === 0 || items.length < c.fFreq) return "-";
+                    
+                    // 内容フィルター使用時のみ行を除外する
+                    if (c.fContent && c.fContent.trim() !== '') {
+                        if (items.length === 0 || items.length < c.fFreq) {
+                            return null;
+                        }
+                    } else {
+                        // 通常時は"-"を表示
+                        if (items.length === 0 || items.length < c.fFreq) {
+                            return "-";
+                        }
+                    }
 
                     if (c.mode === 'freq') return items.length + " 回";
                     if (c.mode === 'date') return items[items.length - 1].date;
                     return items[items.length - 1].content;
                 });
+                
+                // 内容フィルター使用時でnullが含まれる場合のみ行を除外
+                const hasContentFilter = activeConfigs.some(c => c.fContent && c.fContent.trim() !== '');
+                if (hasContentFilter && cells.includes(null)) {
+                    return null;
+                }
+                
                 return cells;
-            });
+            }).filter(row => row !== null);
 
             return { headers: activeConfigs.map(c => c.displayName), rows, configIndices: activeConfigs.map(c => headerConfigs.indexOf(c)) };
         }
