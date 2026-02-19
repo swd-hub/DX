@@ -493,9 +493,13 @@
                             <br>
                             新規就農日がない場合の遡り年数(X): <input type="number" id="backwardYearsZ" value="4" min="1"
                                 onchange="renderTable()" style="padding: 5px; width: 60px;"> 年
+                            <br>
+                            就農後の年数(Y): <input type="number" id="afterFarmingYearsY" value="1" min="0"
+                                onchange="renderTable()" style="padding: 5px; width: 60px;"> 年
                             <div style="margin-top: 8px; font-size: 0.8rem; color: #666; line-height: 1.4;">
                                 ※「青年等就農計画推進会議」の「新規就農」がある場合は認定日が基準日より青年等就農計画期間の5年以内、<br>
-                                　無い場合は最も新しい記録が基準日よりX年以内(初期設定：就農準備年数3年+再支援開始1年の4年)の対象者を表示します。
+                                　無い場合は最も新しい記録が基準日よりX年以内(初期設定：就農準備年数3年+再支援開始1年の4年)の対象者を表示します。<br>
+                                　就農日がある場合は、就農後の経過年数が Y 年以内の対象者を表示します。就農日がない人は常に表示対象となります。
                             </div>
                         </div>
                     </div>
@@ -602,23 +606,23 @@
             return rows.sort((a, b) => {
                 let aVal = a[columnIndex];
                 let bVal = b[columnIndex];
-                
+
                 // 数値としてソートできる場合は数値として比較
                 const aNum = parseFloat(aVal);
                 const bNum = parseFloat(bVal);
-                
+
                 if (!isNaN(aNum) && !isNaN(bNum)) {
                     return direction === 'asc' ? aNum - bNum : bNum - aNum;
                 }
-                
+
                 // 日付としてソートできる場合は日付として比較
                 const aDate = parseJapaneseDate(aVal);
                 const bDate = parseJapaneseDate(bVal);
-                
+
                 if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
                     return direction === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
                 }
-                
+
                 // 文字列として比較
                 if (direction === 'asc') {
                     return aVal.localeCompare(bVal, 'ja');
@@ -672,6 +676,7 @@
                     tableTitle: document.getElementById('tableTitle').value,
                     latestDateLimit: document.getElementById('latestDateLimit').value,
                     backwardYearsZ: document.getElementById('backwardYearsZ').value,
+                    afterFarmingYearsY: document.getElementById('afterFarmingYearsY').value,
                     enableDedup: document.getElementById('enableDedup').checked,
                     currentFontSize,
                     printOrientation,
@@ -695,6 +700,7 @@
                     document.getElementById('tableTitle').value = state.tableTitle || '';
                     if (state.latestDateLimit) document.getElementById('latestDateLimit').value = state.latestDateLimit;
                     if (state.backwardYearsZ) document.getElementById('backwardYearsZ').value = state.backwardYearsZ;
+                    if (state.afterFarmingYearsY) document.getElementById('afterFarmingYearsY').value = state.afterFarmingYearsY;
                     if (typeof state.enableDedup === 'boolean') document.getElementById('enableDedup').checked = state.enableDedup;
                     if (state.currentFontSize) {
                         currentFontSize = state.currentFontSize;
@@ -750,8 +756,8 @@
 
             let s = dateStr.trim();
 
-            // 和暦（R7.10.23 など）の場合
-            const eraRegex = /^([RHSTM])(\d+)[\./](\d{1,2})[\./](\d{1,2})$/;
+            // 和暦（R 7 . 10 . 23 など）の場合（スペースを許容）
+            const eraRegex = /^\s*([RHSTM])\s*(\d+)\s*[\./]\s*(\d{1,2})\s*[\./]\s*(\d{1,2})\s*$/;
             const match = s.match(eraRegex);
 
             if (match) {
@@ -829,7 +835,15 @@
                 itemSet.add(cols[2]);
 
                 const parsedDate = parseJapaneseDate(cols[0]);
-                const timestamp = (parsedDate && !isNaN(parsedDate)) ? parsedDate.getTime() : 0;
+                let timestamp = (parsedDate && !isNaN(parsedDate)) ? parsedDate.getTime() : 0;
+
+                // 日付列が空の場合、内容列に日付があるか確認
+                if (timestamp === 0) {
+                    const parsedContentDate = parseJapaneseDate(cols[3]);
+                    if (parsedContentDate && !isNaN(parsedContentDate)) {
+                        timestamp = parsedContentDate.getTime();
+                    }
+                }
 
                 tempRecords.push({
                     date: cols[0],
@@ -1057,12 +1071,20 @@
         function getTableData() {
             const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
             const dateLimitValue = document.getElementById('latestDateLimit').value;
-            const dateLimitTs = dateLimitValue ? new Date(dateLimitValue + 'T00:00:00').getTime() : 0;
+            let dateLimitTs = dateLimitValue ? new Date(dateLimitValue + 'T00:00:00').getTime() : 0;
+
+            // 日付が不正（NaN）な場合は今日の日付をデフォルトにする
+            if (!dateLimitTs || isNaN(dateLimitTs)) {
+                dateLimitTs = new Date().setHours(0, 0, 0, 0);
+            }
+
             const zYears = parseInt(document.getElementById('backwardYearsZ').value) || 2;
+            const valY = document.getElementById('afterFarmingYearsY').value;
+            const afterFarmingYearsY = (valY === "" || isNaN(valY)) ? 1 : parseInt(valY);
 
             const grouped = {};
             rawRecords.forEach(r => {
-                if (!grouped[r.name]) grouped[r.name] = { items: {}, maxTs: 0, shinukiShunoTs: null };
+                if (!grouped[r.name]) grouped[r.name] = { items: {}, maxTs: 0, shinukiShunoTs: null, farmingStartDate: null };
                 if (!grouped[r.name].items[r.item]) grouped[r.name].items[r.item] = [];
                 grouped[r.name].items[r.item].push(r);
                 if (r.ts > grouped[r.name].maxTs) grouped[r.name].maxTs = r.ts;
@@ -1071,6 +1093,13 @@
                 if (r.item === '青年等就農計画推進会議' && r.content === '新規就農') {
                     if (grouped[r.name].shinukiShunoTs === null || r.ts > grouped[r.name].shinukiShunoTs) {
                         grouped[r.name].shinukiShunoTs = r.ts;
+                    }
+                }
+
+                // 就農日を追跡（有効な日付>0のみ）
+                if (r.item === '就農' || r.item.includes('就農日')) {
+                    if (r.ts > 0 && (grouped[r.name].farmingStartDate === null || r.ts < grouped[r.name].farmingStartDate)) {
+                        grouped[r.name].farmingStartDate = r.ts;
                     }
                 }
             });
@@ -1084,14 +1113,28 @@
 
             const fiveYearsTs = getThresholdTs(5);
             const zYearsTs = getThresholdTs(zYears);
+            const afterFarmingYearsTs = dateLimitTs - (afterFarmingYearsY * 365 * 24 * 60 * 60 * 1000);
 
             let names = Object.keys(grouped).filter(name => {
                 const data = grouped[name];
-                if (data.shinukiShunoTs !== null) {
+
+                // 就農後の年数チェック（Y年経過したら非表示）
+                // 有効な就農日（>0）がある場合のみチェックし、不明（なし・ー）な場合は除外しない
+                if (data.farmingStartDate !== null && data.farmingStartDate > 0) {
+                    const yearsSinceFarming = (dateLimitTs - data.farmingStartDate) / (365 * 24 * 60 * 60 * 1000);
+                    // 修正：就農後の年数が Y 「以内」の人を表示する
+                    if (yearsSinceFarming > afterFarmingYearsY) {
+                        return false;
+                    }
+                }
+
+                if (data.shinukiShunoTs !== null && data.shinukiShunoTs > 0) {
                     // ケース1：新規就農がある場合、基準日から5年以内
                     return data.shinukiShunoTs >= fiveYearsTs && data.shinukiShunoTs <= dateLimitTs;
                 } else {
-                    // ケース2：新規就農がない場合、最新の日付が基準日からZ年以内
+                    // ケース2：新規就農がない（または日付が不明）場合、
+                    // 最新の日付が基準日からZ年以内、または日付データが全く存在しない（maxTs=0）場合を表示
+                    if (data.maxTs === 0) return true;
                     return data.maxTs >= zYearsTs && data.maxTs <= dateLimitTs;
                 }
             }).sort();
@@ -1130,7 +1173,7 @@
                             return keywords.every(keyword => content.includes(keyword.toLowerCase()));
                         });
                     }
-                    
+
                     // 内容フィルター使用時のみ行を除外する
                     if (c.fContent && c.fContent.trim() !== '') {
                         if (items.length === 0 || items.length < c.fFreq) {
@@ -1147,17 +1190,22 @@
                     if (c.mode === 'date') return items[items.length - 1].date;
                     return items[items.length - 1].content;
                 });
-                
+
                 // 内容フィルター使用時でnullが含まれる場合のみ行を除外
                 const hasContentFilter = activeConfigs.some(c => c.fContent && c.fContent.trim() !== '');
                 if (hasContentFilter && cells.includes(null)) {
                     return null;
                 }
-                
+
                 return cells;
             }).filter(row => row !== null);
 
-            return { headers: activeConfigs.map(c => c.displayName), rows, configIndices: activeConfigs.map(c => headerConfigs.indexOf(c)) };
+            return {
+                headers: activeConfigs.map(c => c.displayName),
+                rows,
+                configIndices: activeConfigs.map(c => headerConfigs.indexOf(c)),
+                activeConfigs // これを追加
+            };
         }
 
         function generatePrintStyles(configIndices) {
@@ -1188,7 +1236,7 @@
         }
 
         function renderTable() {
-            const { headers, rows, configIndices } = getTableData();
+            const { headers, rows, configIndices, activeConfigs } = getTableData();
             document.getElementById('displayTitle').innerText = document.getElementById('tableTitle').value;
 
             let html = `<table><thead><tr>`;
@@ -1218,14 +1266,26 @@
                 sortedRows = sortRows(rows, sortColumn, sortDirection);
             }
 
-            sortedRows.forEach(r => {
-                html += `<tr>` + r.map((c, i) => {
-                    const width = columnWidths[configIndices[i]] || 'auto';
-                    return i === 0 ? `<td style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;"><strong>${c}</strong></td>` : `<td style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;">${c}</td>`;
-                }).join('') + `</tr>`;
-            });
-
-            document.getElementById('tablePreview').innerHTML = html + `</tbody></table>`;
+            if (sortedRows.length === 0) {
+                const isFiltered = activeConfigs.some(c => c.fDate || c.fContent || (c.fFreq && c.fFreq > 1));
+                const filterMsg = isFiltered ? "<br><span style='color:red; font-size:0.8rem;'>※フィルタ条件が適用されています。「日付フィルタ」や「内容フィルタ」が入力されていないか確認してください。</span>" : "";
+                document.getElementById('tablePreview').innerHTML = `
+                    <div style="padding: 40px; text-align: center; border: 1px dashed #ccc; background: #fefefe; border-radius: 8px;">
+                        <strong>表示対象のデータがありません</strong>${filterMsg}
+                        <div style="font-size: 0.8rem; margin-top: 10px; color: #666;">
+                            「基準日」を今日にするか、「遡り年数」や「就農後の年数」を大きく設定してみてください。
+                        </div>
+                    </div>`;
+            } else {
+                sortedRows.forEach(r => {
+                    html += `<tr>` + r.map((c, i) => {
+                        const width = columnWidths[configIndices[i]] || 'auto';
+                        const cellVal = (c === null || c === undefined) ? "-" : c;
+                        return i === 0 ? `<td style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;"><strong>${cellVal}</strong></td>` : `<td style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem;">${cellVal}</td>`;
+                    }).join('') + `</tr>`;
+                });
+                document.getElementById('tablePreview').innerHTML = html + `</tbody></table>`;
+            }
 
             document.getElementById('statTotal').innerText = stats.total;
             document.getElementById('statFullDup').innerText = stats.fullDup;
