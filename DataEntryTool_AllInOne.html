@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>データ記録ツール - 紙資料電子化 (All-in-One)</title>
+    <style>
+        /* 全体スタイル */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --paper-bg: #fdfdfd;
+            --border-color: #dcdde1;
+            --text-color: #2f3640;
+            --text-muted: #7f8c8d;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-large: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Yu Gothic', 'Hiragino Sans', 'Inter', sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: radial-gradient(#d1d1d1 0.5px, transparent 0.5px);
+            background-size: 20px 20px;
+            /* Subtle grid pattern like paper */
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 40px;
+            background-color: var(--card-bg);
+            box-shadow: var(--shadow-large);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ヘッダー */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px dashed var(--border-color);
+        }
+
+        header h1 {
+            font-size: 2.8em;
+            color: var(--primary-color);
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1em;
+        }
+
+        /* セクション共通 */
+        section {
+            margin-bottom: 40px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1em;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        /* ファイル操作エリア */
+        .file-operations {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .file-upload,
+        .file-download {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="file"] {
+            font-size: 0.9em;
+            color: var(--text-muted);
+        }
+
+        button {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .primary-btn {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .primary-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .secondary-btn {
+            background-color: #ecf0f1;
+            color: var(--secondary-color);
+        }
+
+        .secondary-btn:hover {
+            background-color: #bdc3c7;
+        }
+
+        /* データ表示エリア */
+        .data-display {
+            border: 1px solid var(--border-color);
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 15px 20px;
+            background: #f1f2f6;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            margin-bottom: 0;
+            font-size: 1.1em;
+        }
+
+        .section-header h2::before {
+            display: none;
+        }
+
+        /* テーブルスタイル */
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--secondary-color);
+            font-weight: 700;
+            text-align: left;
+            padding: 14px 18px;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 12px 18px;
+            border-bottom: 1px solid #f1f2f6;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 既存データ（閲覧のみ） */
+        #existingData {
+            color: #636e72;
+        }
+
+        #existingData tr:hover {
+            background-color: #fdfdfd;
+        }
+
+        /* 入力カード */
+        .input-section {
+            background: #fff;
+            padding: 0;
+        }
+
+        .input-card {
+            background-color: var(--paper-bg);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .input-card::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid #f1f2f6;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #edeff2;
+            border-radius: 8px;
+            font-size: 16px;
+            color: var(--text-color);
+            background: #fff;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            /* サイズを完全に一致させるため追加 */
+            ime-mode: active;
+            /* 基本は日本語入力オン */
+        }
+
+        #dateInput {
+            ime-mode: disabled;
+            /* 年月日だけは半角（直接入力） */
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+        }
+
+        /* 日付プレビュー */
+        .date-preview-container {
+            margin-top: 12px;
+        }
+
+        .date-preview {
+            font-size: 1.8em;
+            font-weight: 800;
+            color: var(--accent-color);
+            letter-spacing: 1px;
+            min-height: 1.2em;
+            text-align: center;
+            background: #ebf3f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #d6eaf8;
+        }
+
+        /* ボタングループ */
+        .button-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 35px;
+        }
+
+        .button-group button {
+            padding: 15px 40px;
+            font-size: 16px;
+        }
+
+        /* 新規データテーブル */
+        #newData {
+            background: #fff;
+            border: 1px solid var(--success-color);
+            border-radius: 8px;
+        }
+
+        #newData th {
+            background: #eafaf1;
+            color: var(--success-color);
+            border-bottom: 2px solid var(--success-color);
+        }
+
+        tr.new-row {
+            background-color: #f4fbf7;
+        }
+
+        tr.new-row:hover {
+            background-color: #eafaf1;
+        }
+
+        .delete-btn {
+            background-color: transparent;
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        /* メッセージ通知 */
+        #messageContainer {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+        }
+
+        .message {
+            padding: 16px 24px;
+            margin-top: 10px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .message.success {
+            background-color: var(--success-color);
+        }
+
+        .message.error {
+            background-color: var(--error-color);
+        }
+
+        .message.info {
+            background-color: var(--accent-color);
+        }
+
+        /* フッター */
+        footer {
+            margin-top: 60px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        /* スマホ対応 */
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+                padding: 20px;
+            }
+
+            .file-operations {
+                flex-direction: column;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>データ記録ツール</h1>
+            <p>紙資料をCSVに電子化するツール</p>
+        </header>
+
+        <main>
+            <!-- ファイル操作エリア -->
+            <section class="file-operations">
+                <div class="file-upload">
+                    <label for="csvFile">既存CSVファイルを読み込む：</label>
+                    <input type="file" id="csvFile" accept=".csv">
+                    <button id="loadCsv">読み込み</button>
+                </div>
+                <div class="file-download">
+                    <button id="saveCsv">CSVを保存</button>
+                    <button id="saveConfig">設定を保存</button>
+                    <button id="loadConfig">設定を読み込み</button>
+                </div>
+            </section>
+
+            <!-- データ表示エリア -->
+            <section class="data-display" id="dataDisplaySection">
+                <div class="section-header">
+                    <h2>既存データ（閲覧のみ）</h2>
+                    <button id="toggleDataDisplay" class="toggle-btn">非表示</button>
+                </div>
+                <div class="table-container" id="existingDataContainer">
+                    <table id="existingData">
+                        <thead>
+                            <tr>
+                                <th>年月日</th>
+                                <th>名前</th>
+                                <th>項目</th>
+                                <th>内容</th>
+                            </tr>
+                        </thead>
+                        <tbody id="existingDataBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 入力カードエリア -->
+            <section class="input-section">
+                <h2>新規データ入力</h2>
+                <div class="input-card" id="inputCard">
+                    <div class="form-group">
+                        <label for="dateInput">年月日：</label>
+                        <input type="text" id="dateInput" placeholder="250214 → R7.2.14" maxlength="10"
+                            inputmode="numeric">
+                        <div class="date-preview-container">
+                            <div class="date-preview" id="datePreview"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nameInput">名前：</label>
+                        <input type="text" id="nameInput" list="nameSuggestions" inputmode="text" lang="ja">
+                        <datalist id="nameSuggestions"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemInput">項目：</label>
+                        <input type="text" id="itemInput" list="itemSuggestions" placeholder="項目を入力または選択"
+                            inputmode="text" lang="ja">
+                        <datalist id="itemSuggestions"></datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contentInput">内容：</label>
+                        <input type="text" id="contentInput" list="contentSuggestions" placeholder="過去の入力からサジェストされます"
+                            inputmode="text" lang="ja">
+                        <datalist id="contentSuggestions"></datalist>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="addRow" class="primary-btn">追加</button>
+                        <button id="clearForm" class="secondary-btn">クリア</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 新規データプレビュー -->
+            <section class="new-data-preview">
+                <h2>新規データ（プレビュー）</h2>
+                <div class="table-container">
+                    <table id="newData">
+                        <thead>
+                            <tr>
+                                <th>年月日</th>
+                                <th>名前</th>
+                                <th>項目</th>
+                                <th>内容</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="newDataBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>データ記録ツール v1.1 - 2026</p>
+        </footer>
+    </div>
+
+    <!-- メッセージ通知 -->
+    <div id="messageContainer"></div>
+
+    <!-- 設定ファイル入力（非表示） -->
+    <input type="file" id="configFile" accept=".json" style="display: none;">
+
+    <script>
+        /**
+         * DateEngine Class
+         */
+        class DateEngine {
+            constructor() {
+                this.eraStartYears = { 'M': 1868, 'T': 1912, 'S': 1926, 'H': 1989, 'R': 2019 };
+                this.eraNames = { 'M': '明治', 'T': '大正', 'S': '昭和', 'H': '平成', 'R': '令和' };
+            }
+            convertSixDigitToWareki(sixDigit) {
+                if (!sixDigit || sixDigit.length !== 6 || !/^\d{6}$/.test(sixDigit)) return null;
+                const year = parseInt(sixDigit.substring(0, 2));
+                const month = parseInt(sixDigit.substring(2, 4));
+                const day = parseInt(sixDigit.substring(4, 6));
+                const fullYear = 2000 + year;
+                return this.convertSeirekiToWareki(fullYear, month, day);
+            }
+            convertSeirekiToWareki(year, month, day) {
+                let era = ''; let eraYear = 0;
+                if (year >= 2019) { era = 'R'; eraYear = year - 2019 + 1; }
+                else if (year >= 1989) { era = 'H'; eraYear = year - 1989 + 1; }
+                else if (year >= 1926) { era = 'S'; eraYear = year - 1926 + 1; }
+                else if (year >= 1912) { era = 'T'; eraYear = year - 1912 + 1; }
+                else if (year >= 1868) { era = 'M'; eraYear = year - 1868 + 1; }
+                else return null;
+                return `${era}${eraYear}.${month}.${day}`;
+            }
+            convertWarekiToSeireki(wareki) {
+                if (!wareki) return null;
+                const match = wareki.match(/^([MTHSR])(\d+)\.(\d+)\.(\d+)$/);
+                if (!match) return null;
+                const era = match[1];
+                const eraYear = parseInt(match[2]);
+                const month = parseInt(match[3]);
+                const day = parseInt(match[4]);
+                const startYear = this.eraStartYears[era];
+                if (!startYear) return null;
+                const seireki = startYear + eraYear - 1;
+                return { year: seireki, month, day };
+            }
+            convertToJapaneseDisplay(wareki) {
+                if (!wareki) return '';
+                const seireki = this.convertWarekiToSeireki(wareki);
+                if (!seireki) return '';
+                const match = wareki.match(/^([MTHSR])(\d+)\.(\d+)\.(\d+)$/);
+                if (!match) return '';
+                const era = match[1];
+                const eraYear = parseInt(match[2]);
+                const month = parseInt(match[3]);
+                const day = parseInt(match[4]);
+                const eraName = this.eraNames[era];
+                return `${eraName}${eraYear}年${month}月${day}日`;
+            }
+            getDateValue(wareki) {
+                const seireki = this.convertWarekiToSeireki(wareki);
+                if (!seireki) return 0;
+                const dayValue = seireki.day === 0 ? 0.5 : seireki.day;
+                return seireki.year * 10000 + seireki.month * 100 + dayValue;
+            }
+            sortDates(warekiList) {
+                return warekiList.sort((a, b) => this.getDateValue(a) - this.getDateValue(b));
+            }
+            isValidDate(year, month, day) {
+                if (month < 1 || month > 12) return false;
+                if (day < 0 || day > 31) return false;
+                const lastDay = new Date(year, month, 0).getDate();
+                if (day > lastDay && day !== 0) return false;
+                return true;
+            }
+            processSixDigitInput(input) {
+                const cleanInput = input.replace(/[^\d]/g, '');
+                if (cleanInput.length === 6) {
+                    const wareki = this.convertSixDigitToWareki(cleanInput);
+                    if (wareki) {
+                        const japanese = this.convertToJapaneseDisplay(wareki);
+                        return { wareki: wareki, japanese: japanese, isValid: true };
+                    }
+                }
+                return { wareki: null, japanese: '', isValid: false };
+            }
+            normalizeDate(dateStr) {
+                if (!dateStr) return '';
+                if (/^\d{6}$/.test(dateStr)) return this.convertSixDigitToWareki(dateStr);
+                if (/^[MTHSR]\d+\.\d+\.\d+$/.test(dateStr)) return dateStr;
+                return '';
+            }
+        }
+        const dateEngine = new DateEngine();
+
+        /**
+         * CsvHandler Class
+         */
+        class CsvHandler {
+            constructor() {
+                this.headers = ['年月日', '名前', '項目', '内容'];
+                this.existingData = [];
+                this.newData = [];
+            }
+            detectEncoding(arrayBuffer) {
+                const uint8Array = new Uint8Array(arrayBuffer);
+                if (uint8Array.length >= 3 && uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) return 'UTF-8-BOM';
+                let sjisLikely = 0; let utf8Likely = 0;
+                for (let i = 0; i < uint8Array.length - 1; i++) {
+                    const b1 = uint8Array[i]; const b2 = uint8Array[i + 1];
+                    if ((b1 >= 0x81 && b1 <= 0x9F) || (b1 >= 0xE0 && b1 <= 0xEF)) { if (b2 >= 0x40 && b2 <= 0xFC) sjisLikely++; }
+                    if (b1 >= 0xC0 && b1 <= 0xDF && b2 >= 0x80 && b2 <= 0xBF) utf8Likely++;
+                }
+                return sjisLikely > utf8Likely ? 'Shift-JIS' : 'UTF-8';
+            }
+            async loadCsvFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const buf = e.target.result; const enc = this.detectEncoding(buf);
+                            let text;
+                            if (enc === 'UTF-8-BOM' || enc === 'UTF-8') text = new TextDecoder('utf-8').decode(buf);
+                            else { try { text = new TextDecoder('shift-jis').decode(buf); } catch (e) { text = new TextDecoder('utf-8').decode(buf); } }
+                            text = text.replace(/^\uFEFF/, '');
+                            resolve(this.parseCsv(text));
+                        } catch (e) { reject(e); }
+                    };
+                    reader.onerror = () => reject(new Error('Read Error'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            parseCsv(csvText) {
+                const lines = csvText.split('\n').filter(l => l.trim());
+                const data = [];
+                for (let i = 0; i < lines.length; i++) {
+                    const fields = this.parseCsvLine(lines[i].trim());
+                    if (i === 0 && this.isHeaderRow(fields)) continue;
+                    if (fields.length >= 4) {
+                        const row = { 年月日: dateEngine.normalizeDate(fields[0]), 名前: fields[1], 項目: fields[2], 内容: fields[3] };
+                        data.push(row);
+                    }
+                }
+                return data;
+            }
+            parseCsvLine(line) {
+                const fields = []; let current = ''; let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') { current += '"'; i++; }
+                        else inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) { fields.push(current.trim()); current = ''; }
+                    else current += char;
+                }
+                fields.push(current.trim());
+                return fields;
+            }
+            isHeaderRow(fields) {
+                return fields.some(f => ['年月日', '名前', '項目', '内容'].some(p => f.includes(p)));
+            }
+            sortData(data) {
+                return data.sort((a, b) => {
+                    const vA = dateEngine.getDateValue(a.年月日); const vB = dateEngine.getDateValue(b.年月日);
+                    if (vA !== vB) return vA - vB;
+                    return a.名前.localeCompare(b.名前, 'ja');
+                });
+            }
+            generateCsv(data) {
+                let csv = this.headers.join(',') + '\n';
+                for (const row of data) {
+                    const fields = [row.年月日, row.名前, row.項目, row.内容].map(f => this.escapeCsvField(f || ''));
+                    csv += fields.join(',') + '\n';
+                }
+                return csv;
+            }
+            escapeCsvField(f) {
+                if (f.includes(',') || f.includes('"') || f.includes('\n')) return '"' + f.replace(/"/g, '""') + '"';
+                return f;
+            }
+            downloadCsv(data, filename) {
+                const text = this.generateCsv(data);
+                const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const bytes = new TextEncoder().encode(text);
+                const blob = new Blob([bom, bytes], { type: 'text/csv;charset=utf-8' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+                a.style.display = 'none'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            }
+            generateFilename() {
+                const n = new Date();
+                return `dx_output_${n.getFullYear()}${String(n.getMonth() + 1).padStart(2, '0')}${String(n.getDate()).padStart(2, '0')}.csv`;
+            }
+            setExistingData(data) { this.existingData = this.sortData(data); }
+            addNewData(row) { this.newData.push(row); }
+            removeNewData(idx) { this.newData.splice(idx, 1); }
+            getAllData() { return this.sortData([...this.existingData, ...this.newData]); }
+            getExistingData() { return this.existingData; }
+            getNewData() { return this.newData; }
+        }
+        const csvHandler = new CsvHandler();
+
+        /**
+         * ConfigManager Class
+         */
+        class ConfigManager {
+            constructor() {
+                this.defaultConfig = {
+                    version: '1.0', name: 'データ記録設定',
+                    fields: [{ id: 'item', name: '項目', type: 'select', required: true, options: ['適', '不適', '継続', '改善', '完了', '保留'] }]
+                };
+                this.currentConfig = null;
+            }
+            async loadConfigFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const c = JSON.parse(e.target.result); this.validateConfig(c);
+                            this.currentConfig = c; resolve(c);
+                        } catch (e) { reject(e); }
+                    };
+                    reader.readAsText(file, 'utf-8');
+                });
+            }
+            validateConfig(c) {
+                if (!c || !Array.isArray(c.fields)) throw new Error('Invalid config');
+            }
+            getDefaultConfig() { return JSON.parse(JSON.stringify(this.defaultConfig)); }
+            getCurrentConfig() { return this.currentConfig || this.getDefaultConfig(); }
+            downloadConfig(filename) {
+                const text = JSON.stringify(this.getCurrentConfig(), null, 2);
+                const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+        }
+        const configManager = new ConfigManager();
+
+        /**
+         * UIController Class
+         */
+        class UIController {
+            constructor() {
+                this.currentConfig = null;
+                this.lastValues = { 年月日: '', 名前: '' };
+                this.init();
+            }
+            init() { this.bindEvents(); this.loadDefaultConfig(); }
+            bindEvents() {
+                document.getElementById('loadCsv').addEventListener('click', () => this.loadCsvFile());
+                document.getElementById('saveCsv').addEventListener('click', () => this.saveCsvFile());
+                document.getElementById('saveConfig').addEventListener('click', () => this.saveConfigFile());
+                document.getElementById('loadConfig').addEventListener('click', () => this.loadConfigFile());
+                document.getElementById('toggleDataDisplay').addEventListener('click', () => this.toggleDataDisplay());
+
+                document.getElementById('dateInput').addEventListener('input', (e) => this.handleDateInput(e));
+                document.getElementById('nameInput').addEventListener('input', (e) => { e.target.value = this.toFullWidth(e.target.value); this.handleNameInput(e); });
+                document.getElementById('itemInput').addEventListener('input', (e) => { e.target.value = this.toFullWidth(e.target.value); });
+                document.getElementById('contentInput').addEventListener('input', (e) => { e.target.value = this.toFullWidth(e.target.value); });
+
+                document.getElementById('addRow').addEventListener('click', () => this.addRow());
+                document.getElementById('clearForm').addEventListener('click', () => this.clearForm());
+                document.getElementById('csvFile').addEventListener('change', (e) => this.handleCsvFileSelect(e));
+                document.getElementById('configFile').addEventListener('change', (e) => this.handleConfigFileSelect(e));
+                document.addEventListener('keydown', (e) => this.handleKeyboardShortcut(e));
+            }
+            toHalfWidth(s) { return s.replace(/[Ａ-Ｚａ-ｚ０-９．]/g, (m) => String.fromCharCode(m.charCodeAt(0) - 0xFEE0)).replace(/ー/g, '-').replace(/　/g, ' '); }
+            toFullWidth(s) { return s.replace(/[!-~]/g, (m) => String.fromCharCode(m.charCodeAt(0) + 0xFEE0)).replace(/ /g, '　'); }
+            async loadDefaultConfig() {
+                try {
+                    const res = await fetch('input-template.json');
+                    if (res.ok) this.currentConfig = await res.json();
+                    else this.currentConfig = configManager.getDefaultConfig();
+                    this.updateItemSuggestions();
+                } catch (e) { this.currentConfig = configManager.getDefaultConfig(); this.updateItemSuggestions(); }
+            }
+            updateItemSuggestions() {
+                const dl = document.getElementById('itemSuggestions'); if (!dl) return;
+                const set = new Set();
+                csvHandler.getExistingData().forEach(r => { if (r.項目) set.add(r.項目.trim()); });
+                if (set.size === 0 && this.currentConfig && this.currentConfig.fields) {
+                    const f = this.currentConfig.fields.find(f => f.id === 'item');
+                    if (f && f.options) f.options.forEach(o => set.add(o));
+                }
+                dl.innerHTML = '';
+                Array.from(set).sort().forEach(v => { const o = document.createElement('option'); o.value = v; dl.appendChild(o); });
+            }
+            updateNameSuggestions() {
+                const dl = document.getElementById('nameSuggestions'); if (!dl) return;
+                const set = new Set();
+                csvHandler.getExistingData().forEach(r => { if (r.名前) set.add(r.名前.trim()); });
+                dl.innerHTML = '';
+                Array.from(set).sort().forEach(v => { const o = document.createElement('option'); o.value = v; dl.appendChild(o); });
+            }
+            updateContentSuggestions() {
+                const dl = document.getElementById('contentSuggestions'); if (!dl) return;
+                const set = new Set();
+                csvHandler.getExistingData().forEach(r => { if (r.内容) set.add(r.内容.trim()); });
+                csvHandler.getNewData().forEach(r => { if (r.内容) set.add(r.内容.trim()); });
+                dl.innerHTML = '';
+                Array.from(set).sort().forEach(v => { const o = document.createElement('option'); o.value = v; dl.appendChild(o); });
+            }
+            refreshAllSuggestions() { this.updateNameSuggestions(); this.updateItemSuggestions(); this.updateContentSuggestions(); }
+            handleDateInput(e) {
+                e.target.value = this.toHalfWidth(e.target.value);
+                const val = e.target.value; const pre = document.getElementById('datePreview');
+                const digits = val.replace(/[^\d]/g, '');
+                if (digits.length === 6) {
+                    const res = dateEngine.processSixDigitInput(digits);
+                    if (res.isValid) {
+                        e.target.value = res.wareki; pre.textContent = res.japanese; pre.style.color = 'var(--accent-color)';
+                        setTimeout(() => document.getElementById('nameInput').focus(), 100);
+                    } else { pre.textContent = '無効な日付'; pre.style.color = 'var(--error-color)'; }
+                } else if (val.length > 0) { pre.textContent = '入力中...'; pre.style.color = 'var(--text-muted)'; }
+                else pre.textContent = '';
+            }
+            handleNameInput(e) { this.lastValues.名前 = e.target.value; }
+            addRow() {
+                const d = document.getElementById('dateInput'); const n = document.getElementById('nameInput');
+                const i = document.getElementById('itemInput'); const c = document.getElementById('contentInput');
+                if (!d.value || !n.value || !i.value || !c.value) { this.showMessage('全項目入力必須', 'error'); return; }
+                const norm = dateEngine.normalizeDate(d.value);
+                if (!norm) { this.showMessage('日付形式不正', 'error'); return; }
+                csvHandler.addNewData({ 年月日: norm, 名前: n.value, 項目: i.value, 内容: c.value });
+                this.updateNewDataTable(); this.updateContentSuggestions();
+                this.lastValues.年月日 = norm; this.lastValues.名前 = n.value;
+                this.clearForm(true); this.showMessage('追加完了', 'success'); i.focus();
+            }
+            clearForm(keep) {
+                const d = document.getElementById('dateInput'); const n = document.getElementById('nameInput');
+                const i = document.getElementById('itemInput'); const c = document.getElementById('contentInput');
+                const p = document.getElementById('datePreview');
+                if (!keep) { d.value = ''; n.value = ''; p.textContent = ''; this.lastValues = { 年月日: '', 名前: '' }; }
+                else { d.value = this.lastValues.年月日; n.value = this.lastValues.名前; p.textContent = dateEngine.convertToJapaneseDisplay(d.value); }
+                i.value = ''; c.value = '';
+            }
+            async loadCsvFile() {
+                const f = document.getElementById('csvFile').files[0]; if (!f) return;
+                try {
+                    const data = await csvHandler.loadCsvFile(f); csvHandler.setExistingData(data);
+                    this.updateExistingDataTable(); this.refreshAllSuggestions(); this.showMessage('読込完了', 'success');
+                } catch (e) { this.showMessage('読込失敗', 'error'); }
+            }
+            saveCsvFile() {
+                const data = csvHandler.getAllData(); if (data.length === 0) return;
+                csvHandler.downloadCsv(data, csvHandler.generateFilename());
+            }
+            saveConfigFile() { configManager.downloadConfig(`template_${new Date().toISOString().split('T')[0]}.json`); }
+            loadConfigFile() { document.getElementById('configFile').click(); }
+            handleCsvFileSelect(e) { if (e.target.files[0]) this.loadCsvFile(); }
+            async handleConfigFileSelect(e) {
+                const f = e.target.files[0]; if (!f) return;
+                try { this.currentConfig = await configManager.loadConfigFile(f); this.updateItemSuggestions(); this.showMessage('設定完了', 'success'); }
+                catch (e) { this.showMessage('設定失敗', 'error'); }
+            }
+            updateExistingDataTable() {
+                const b = document.getElementById('existingDataBody'); b.innerHTML = '';
+                csvHandler.getExistingData().forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${r.年月日}</td><td>${r.名前}</td><td>${r.項目}</td><td>${r.内容}</td>`;
+                    b.appendChild(tr);
+                });
+            }
+            updateNewDataTable() {
+                const b = document.getElementById('newDataBody'); b.innerHTML = '';
+                csvHandler.getNewData().forEach((r, idx) => {
+                    const tr = document.createElement('tr'); tr.className = 'new-row';
+                    tr.innerHTML = `<td>${r.年月日}</td><td>${r.名前}</td><td>${r.項目}</td><td>${r.内容}</td>
+                <td><button class="delete-btn" onclick="uiController.deleteNewRow(${idx})">削除</button></td>`;
+                    b.appendChild(tr);
+                });
+            }
+            deleteNewRow(idx) { csvHandler.removeNewData(idx); this.updateNewDataTable(); }
+            handleKeyboardShortcut(e) {
+                if (e.ctrlKey && e.key === 's') { e.preventDefault(); this.saveCsvFile(); }
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                    const id = e.target.id;
+                    if (id === 'dateInput') { e.preventDefault(); document.getElementById('nameInput').focus(); }
+                    else if (id === 'nameInput') { e.preventDefault(); document.getElementById('itemInput').focus(); }
+                    else if (id === 'itemInput' || id === 'contentInput') { e.preventDefault(); this.addRow(); }
+                }
+            }
+            showMessage(msg, type) {
+                const c = document.getElementById('messageContainer'); const el = document.createElement('div');
+                el.className = `message ${type}`; el.textContent = msg; c.appendChild(el);
+                setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+            }
+            toggleDataDisplay() {
+                const c = document.getElementById('existingDataContainer'); const b = document.getElementById('toggleDataDisplay');
+                const h = c.style.display === 'none'; c.style.display = h ? 'block' : 'none'; b.textContent = h ? '非表示' : '表示';
+            }
+        }
+        const uiController = new UIController();
+    </script>
+</body>
+
+</html>
