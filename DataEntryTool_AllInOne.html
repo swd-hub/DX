@@ -291,8 +291,7 @@
         }
 
         #dateInput {
-            ime-mode: disabled;
-            /* 年月日だけは半角（直接入力） */
+            /* IMEオンのままでも入力・自動変換されるよう設定 */
         }
 
         .form-group input:focus {
@@ -449,7 +448,6 @@
                 <div class="file-upload">
                     <label for="csvFile">既存CSVファイルを読み込む：</label>
                     <input type="file" id="csvFile" accept=".csv">
-                    <button id="loadCsv">読み込み</button>
                 </div>
                 <div class="file-download">
                     <button id="saveCsv">CSVを保存</button>
@@ -486,8 +484,8 @@
                 <div class="input-card" id="inputCard">
                     <div class="form-group">
                         <label for="dateInput">年月日：</label>
-                        <input type="text" id="dateInput" placeholder="250214 → R7.2.14" maxlength="10"
-                            inputmode="numeric">
+                        <input type="text" id="dateInput" placeholder="250214 → R7.2.14" maxlength="10" inputmode="text"
+                            lang="ja">
                         <div class="date-preview-container">
                             <div class="date-preview" id="datePreview"></div>
                         </div>
@@ -792,20 +790,51 @@
             constructor() {
                 this.currentConfig = null;
                 this.lastValues = { 年月日: '', 名前: '' };
+                this.isComposing = false;
                 this.init();
             }
             init() { this.bindEvents(); this.loadDefaultConfig(); }
             bindEvents() {
-                document.getElementById('loadCsv').addEventListener('click', () => this.loadCsvFile());
                 document.getElementById('saveCsv').addEventListener('click', () => this.saveCsvFile());
                 document.getElementById('saveConfig').addEventListener('click', () => this.saveConfigFile());
                 document.getElementById('loadConfig').addEventListener('click', () => this.loadConfigFile());
                 document.getElementById('toggleDataDisplay').addEventListener('click', () => this.toggleDataDisplay());
 
-                document.getElementById('dateInput').addEventListener('input', (e) => this.handleDateInput(e));
-                document.getElementById('nameInput').addEventListener('input', (e) => { e.target.value = this.toFullWidth(e.target.value); this.handleNameInput(e); });
-                document.getElementById('itemInput').addEventListener('input', (e) => { e.target.value = this.toFullWidth(e.target.value); });
-                document.getElementById('contentInput').addEventListener('input', (e) => { e.target.value = this.toFullWidth(e.target.value); });
+                const dateInput = document.getElementById('dateInput');
+                dateInput.addEventListener('compositionstart', () => { this.isComposing = true; });
+                dateInput.addEventListener('compositionend', (e) => {
+                    this.isComposing = false;
+                    this.handleDateInput(e);
+                });
+                dateInput.addEventListener('input', (e) => {
+                    if (this.isComposing) return;
+                    this.handleDateInput(e);
+                });
+
+                const nameInput = document.getElementById('nameInput');
+                const itemInput = document.getElementById('itemInput');
+                const contentInput = document.getElementById('contentInput');
+
+                [nameInput, itemInput, contentInput].forEach(input => {
+                    input.addEventListener('compositionstart', () => { this.isComposing = true; });
+                    input.addEventListener('compositionend', (e) => {
+                        this.isComposing = false;
+                        e.target.value = this.toFullWidth(e.target.value);
+                        if (e.target.id === 'nameInput') this.handleNameInput(e);
+                    });
+                    input.addEventListener('input', (e) => {
+                        if (this.isComposing) return;
+                        const original = e.target.value;
+                        const converted = this.toFullWidth(original);
+                        if (original !== converted) {
+                            const start = e.target.selectionStart;
+                            const end = e.target.selectionEnd;
+                            e.target.value = converted;
+                            e.target.setSelectionRange(start, end);
+                        }
+                        if (e.target.id === 'nameInput') this.handleNameInput(e);
+                    });
+                });
 
                 document.getElementById('addRow').addEventListener('click', () => this.addRow());
                 document.getElementById('clearForm').addEventListener('click', () => this.clearForm());
