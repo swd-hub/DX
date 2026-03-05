@@ -1357,12 +1357,6 @@
                         if (warekiMatch) {
                             // すでに和暦形式の場合はそのまま表示
                             displayValue = rawVal;
-
-                            // 西暦に変換して補足表示
-                            const westernVal = formatToJapaneseDate(rawVal);
-                            if (westernVal && westernVal !== '-') {
-                                ageHtml += `<div class="field-age">${escapeHtml(westernVal)}</div>`;
-                            }
                         } else {
                             // 和暦をメイン表示に
                             const warekiVal = toWareki(rawVal);
@@ -1370,12 +1364,6 @@
                                 displayValue = warekiVal;
                             } else {
                                 displayValue = formatToJapaneseDate(rawVal);
-                            }
-
-                            // 西暦を小さく表示
-                            const westernVal = formatToJapaneseDate(rawVal);
-                            if (westernVal && westernVal !== '-') {
-                                ageHtml += `<div class="field-age">${escapeHtml(westernVal)}</div>`;
                             }
                         }
                     }
