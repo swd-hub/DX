@@ -775,38 +775,69 @@
         }
 
         function parseDate(dateStr) {
-            console.log(`parseDate input: "${dateStr}"`);
+            if (!dateStr) return { str: '', ts: 0, valid: false, date: new Date(NaN) };
+
             const wareki = {
-                'S': 1926, 'H': 1989, 'R': 2019
+                'M': 1868, 'T': 1912, 'S': 1926, 'H': 1989, 'R': 2019
             };
 
             let normalized = dateStr.trim();
 
-            // 和暦パターン (S=1926, H=1989, R=2019)
-            // Example: R1 = 2019, R2 = 2020. Logic: Base + Year - 1.
-            const warekiMatch = normalized.match(/^([SHR])(\d+)\.(\d+)\.(\d+)$/);
+            // 和暦パターン (M=1868, T=1912, S=1926, H=1989, R=2019)
+            // Example: R1.2.14, H12/1/1, S60-5-5
+            const warekiMatch = normalized.match(/^([MTSHR])(\d+)[./-](\d+)[./-](\d+)$/);
             if (warekiMatch) {
                 const [, era, year, month, day] = warekiMatch;
                 const baseYear = wareki[era];
                 const yyyy = baseYear + parseInt(year) - 1;
-                normalized = `${yyyy}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                // JS Date(year, monthIndex, day)
+                const d = new Date(yyyy, parseInt(month) - 1, parseInt(day));
+                const isValid = !isNaN(d.getTime());
+                return {
+                    str: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+                    ts: isValid ? d.getTime() : 0,
+                    valid: isValid,
+                    date: d
+                };
             }
 
-            // Remove JP characters and slash
-            normalized = normalized.replace(/[年月日]/g, '-').replace(/-$/, '').replace(/\//g, '-');
-            // Remove double hyphens if any (e.g. from "年" and "月" replacement)
-            normalized = normalized.replace(/--/g, '-');
+            // Remove JP characters and convert separators
+            let western = normalized.replace(/[年月日]/g, '-').replace(/-$/, '').replace(/[./]/g, '-');
+            western = western.replace(/--/g, '-');
 
-            const date = new Date(normalized);
+            const date = new Date(western);
             const isValid = !isNaN(date.getTime());
-            console.log(`  -> normalized: "${normalized}", valid: ${isValid}, timestamp: ${isValid ? date.getTime() : 'NaN'}`);
 
             return {
-                str: normalized,
+                str: western,
                 ts: isValid ? date.getTime() : 0,
                 valid: isValid,
                 date: date
             };
+        }
+
+        function formatToJapaneseDate(dateStr) {
+            if (!dateStr || dateStr === '-') return '-';
+            const parsed = parseDate(dateStr);
+            if (!parsed.valid) return dateStr;
+            const d = parsed.date;
+            return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+        }
+
+        function toWareki(dateStr) {
+            const parsed = parseDate(dateStr);
+            if (!parsed.valid) return dateStr;
+            const d = parsed.date;
+            const y = d.getFullYear();
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+
+            if (y >= 2019) return `R${y - 2019 + 1}.${m}.${day}`;
+            if (y >= 1989) return `H${y - 1989 + 1}.${m}.${day}`;
+            if (y >= 1926) return `S${y - 1926 + 1}.${m}.${day}`;
+            if (y >= 1912) return `T${y - 1912 + 1}.${m}.${day}`;
+            if (y >= 1868) return `M${y - 1868 + 1}.${m}.${day}`;
+            return `${y}.${m}.${day}`;
         }
 
         function calculateAge(birthDateStr, referenceDateVal) {
@@ -1152,21 +1183,25 @@
                     const currentHasContent = currentRecord.content && currentRecord.content.trim() !== '';
 
                     const isBirth = isBirthdateField(key);
+                    const isFarming = key.includes('就農');
 
-                    if (isBirth) {
-                        const newVal = (record.content && record.content.trim() !== '') ? record.content : record.dateStr;
-                        const currVal = (currentRecord.content && currentRecord.content.trim() !== '') ? currentRecord.content : currentRecord.dateStr;
+                    if (isBirth || isFarming) {
+                        // 生年月日と就農については、項目の「年月日」（第一列）を優先的に使用する
+                        const newVal = (record.dateStr && record.dateStr.trim() !== '' && record.dateStr !== '-') ? record.dateStr : record.content;
+                        const currVal = (currentRecord.dateStr && currentRecord.dateStr.trim() !== '' && currentRecord.dateStr !== '-') ? currentRecord.dateStr : currentRecord.content;
 
-                        const newBdayTs = parseDate(newVal).ts;
-                        const currBdayTs = parseDate(currVal).ts;
+                        const newBday = parseDate(newVal);
+                        const currBday = parseDate(currVal);
 
-                        if (newBdayTs < currBdayTs) {
-                            shouldUpdate = true;
-                        } else if (newBdayTs === currBdayTs) {
-                            if (hasContent && !currentHasContent) {
+                        if (newBday.valid) {
+                            if (!currBday.valid || newBday.ts < currBday.ts) {
                                 shouldUpdate = true;
-                            } else if (isNewer && (hasContent === currentHasContent)) {
-                                shouldUpdate = true;
+                            } else if (newBday.ts === currBday.ts) {
+                                if (hasContent && !currentHasContent) {
+                                    shouldUpdate = true;
+                                } else if (isNewer && (hasContent === currentHasContent)) {
+                                    shouldUpdate = true;
+                                }
                             }
                         }
                     } else if (hasContent) {
@@ -1291,18 +1326,70 @@
 
             const fieldsHtml = activeWithIndex.map(({ config, headerIndex }) => {
                 const record = person.records[config.raw];
-                const displayValue = record ? record.content : '-';
+                let displayValue = '-';
                 const displayDate = record ? record.dateStr : 'N/A';
                 let ageHtml = '';
 
                 const isBirth = isBirthdateField(config.raw);
+                const isFarming = config.raw.includes('就農');
+
+                if (record && (isBirth || isFarming)) {
+                    let rawVal = '';
+
+                    // 生年月日と就農については、項目の「年月日」（第一列）を優先的に使用する
+                    if (record.dateStr && record.dateStr.trim() !== '' && record.dateStr !== '-') {
+                        rawVal = record.dateStr.trim();
+                    } else if (record.content && record.content.trim() !== '' && record.content !== '-') {
+                        rawVal = record.content.trim();
+                    }
+
+                    // データが空の場合はスキップ
+                    if (!rawVal || rawVal === '-' || rawVal.trim() === '') {
+                        displayValue = '-';
+                        // ageHtmlは空のまま
+                    } else {
+                        // デバッグ：実際のデータ値をコンソールに出力
+                        console.log(`Field: ${config.raw}, Raw: "${rawVal}", Content: "${record.content}", DateStr: "${record.dateStr}"`);
+
+                        // 和暦形式かチェック（R/H/S/T/M + 数字.月.日）
+                        const warekiMatch = rawVal.match(/^([RHSMT])(\d+)\.(\d+)\.(\d+)$/);
+
+                        if (warekiMatch) {
+                            // すでに和暦形式の場合はそのまま表示
+                            displayValue = rawVal;
+
+                            // 西暦に変換して補足表示
+                            const westernVal = formatToJapaneseDate(rawVal);
+                            if (westernVal && westernVal !== '-') {
+                                ageHtml += `<div class="field-age">${escapeHtml(westernVal)}</div>`;
+                            }
+                        } else {
+                            // 和暦をメイン表示に
+                            const warekiVal = toWareki(rawVal);
+                            if (warekiVal && warekiVal !== rawVal) {
+                                displayValue = warekiVal;
+                            } else {
+                                displayValue = formatToJapaneseDate(rawVal);
+                            }
+
+                            // 西暦を小さく表示
+                            const westernVal = formatToJapaneseDate(rawVal);
+                            if (westernVal && westernVal !== '-') {
+                                ageHtml += `<div class="field-age">${escapeHtml(westernVal)}</div>`;
+                            }
+                        }
+                    }
+                } else if (record) {
+                    // 生年月日・就農以外の通常フィールド
+                    displayValue = record.content || '-';
+                }
 
                 if (config.showAge && isBirth && record) {
-                    const birthValue = (record.content && record.content.trim() !== '') ? record.content : record.dateStr;
+                    const birthValue = (record.dateStr && record.dateStr.trim() !== '' && record.dateStr !== '-') ? record.dateStr : record.content;
                     const refDate = document.getElementById('dateFilter').value;
                     const age = calculateAge(birthValue, refDate);
                     const ageAlias = config.ageAlias || '年齢';
-                    if (age !== null) ageHtml = `<div class="field-age">${escapeHtml(ageAlias)}: ${age}才</div>`;
+                    if (age !== null) ageHtml += `<div class="field-age">${escapeHtml(ageAlias)}: ${age}才</div>`;
                 }
                 return `            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
                 <div class="card-field-handle">⋮⋮</div>
@@ -1415,8 +1502,18 @@
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
                 store.delete(DATA_KEY);
+
+                // Complete the transaction before reload
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+
+                // Reload the page to ensure clean state
+                location.reload();
             } catch (e) {
                 console.error('Failed to clear data:', e);
+                alert('データのクリアに失敗しました。ページを手動で再読み込みしてください。');
             }
         }
     </script>
