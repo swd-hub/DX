@@ -509,11 +509,6 @@
 
             <div id="configSection" class="card no-print" style="display:none;">
                 <h3>2. 項目の表示設定</h3>
-                <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">
-                    下の表で、見出し（ヘッダー）をマウスで<strong>左右にドラッグ＆ドロップ</strong>すると順番を入れ替えられます。<br>
-                    ここの入力欄の数字も連動して変わります。
-                </p>
-
                 <div class="config-save-area">
                     <span style="font-weight: bold;">設定のファイル管理：</span>
                     <button class="btn btn-sm btn-warning"
@@ -554,6 +549,10 @@
             <input type="text" id="tableTitle" placeholder="例：月間まとめ"
                 style="width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px;"
                 oninput="renderTable()">
+            <p style="font-size:0.85rem; color:#666; margin-top:10px; margin-bottom:0;">
+                下の表で、見出し（ヘッダー）をマウスで<strong>左右にドラッグ＆ドロップ</strong>すると順番を入れ替えられます。<br>
+                「2. 項目の表示設定」の数字も連動して変わります。
+            </p>
         </div>
 
         <div class="card">
@@ -1251,6 +1250,7 @@
             ondragover="handleDragOver(event)" 
             ondrop="handleDrop(event, ${i})"
             ondragleave="handleDragLeave(event)"
+            ondragend="handleDragEnd(event)"
             onclick="sortTable(${i})"
             style="width: ${width === 'auto' ? 'auto' : width + 'px'}; min-width: ${width === 'auto' ? '50px' : width + 'px'}; max-width: ${width === 'auto' ? 'none' : width + 'px'}; overflow: hidden; text-overflow: ellipsis; font-size: ${currentFontSize}rem; cursor: pointer; user-select: none;"
             title="クリックでソート">
@@ -1306,6 +1306,7 @@
             }
             draggedColIndex = index;
             e.dataTransfer.effectAllowed = 'move';
+            if (e.dataTransfer.setData) e.dataTransfer.setData('text/plain', index.toString());
             e.target.classList.add('dragging-col');
         }
 
@@ -1326,6 +1327,12 @@
             }
         }
 
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging-col');
+            document.querySelectorAll('th').forEach(el => el.classList.remove('drag-over'));
+            draggedColIndex = null;
+        }
+
         function handleDrop(e, targetIndex) {
             e.preventDefault();
             const th = e.target.closest('th');
@@ -1342,6 +1349,16 @@
             activeConfigs.forEach((config, index) => {
                 config.order = index + 1;
             });
+
+            if (sortColumn !== -1) {
+                if (sortColumn === draggedColIndex) {
+                    sortColumn = targetIndex;
+                } else if (sortColumn > draggedColIndex && sortColumn <= targetIndex) {
+                    sortColumn--;
+                } else if (sortColumn < draggedColIndex && sortColumn >= targetIndex) {
+                    sortColumn++;
+                }
+            }
 
             renderHeaderConfigUI();
             renderTable();
