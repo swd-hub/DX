@@ -693,6 +693,7 @@
     <script>
         // ===== State Management =====
         const COLUMN_ORDER_KEY = 'dataViewer_indexDATABASE_columnOrder';
+        let loadedFileName = 'Database';
         let rawRecords = [];
         let headerConfigs = [];
         let currentIndex = 0;
@@ -702,6 +703,13 @@
 
         const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth', '誕生日', 'birthday'];
         const FURIGANA_KEYWORDS = ['ふりがな', 'フリガナ', '読み', 'よみ', 'furigana', 'yomi'];
+        const CONTENT_PREFERRED_KEYWORDS = ['研修', '研修内容', '就農内容', '特記事項'];
+
+        function isContentPreferredField(itemName) {
+            if (!itemName) return false;
+            const lower = itemName.toLowerCase();
+            return CONTENT_PREFERRED_KEYWORDS.some(k => lower.includes(k.toLowerCase()));
+        }
 
 
         function saveColumnOrder() {
@@ -762,6 +770,8 @@
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
+
+            loadedFileName = file.name.replace(/\.[^/.]+$/, "");
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -1040,15 +1050,16 @@
             // Debounce save to IndexedDB
             if (window.saveTimeout) clearTimeout(window.saveTimeout);
             window.saveTimeout = setTimeout(() => {
-                saveDataToDB(text);
+                saveDataToDB(text, loadedFileName);
             }, 500);
         }
 
         // ===== IndexedDB Persistence =====
         const DB_NAME = 'DataViewerDB';
-        const DB_VERSION = 1;
+        const DB_VERSION = 2; // align with DataManager and support filename
         const STORE_NAME = 'settings';
         const DATA_KEY = 'csvData';
+        const FILENAME_KEY = 'fileName';
 
         function openDB() {
             return new Promise((resolve, reject) => {
@@ -1064,12 +1075,15 @@
             });
         }
 
-        async function saveDataToDB(data) {
+        async function saveDataToDB(data, fileName) {
             try {
                 const db = await openDB();
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
                 store.put(data, DATA_KEY);
+                if (fileName !== undefined) {
+                    try { store.put(fileName, FILENAME_KEY); } catch (e) { }
+                }
             } catch (e) {
                 console.error('Failed to save data:', e);
             }
@@ -1080,12 +1094,21 @@
                 const db = await openDB();
                 const tx = db.transaction(STORE_NAME, 'readonly');
                 const store = tx.objectStore(STORE_NAME);
-                const request = store.get(DATA_KEY);
 
+                // Load data
+                const request = store.get(DATA_KEY);
                 request.onsuccess = () => {
                     if (request.result) {
                         document.getElementById('indexDATABASE').value = request.result;
-                        processData();
+
+                        // Load filename after data is retrieved
+                        const reqFile = store.get(FILENAME_KEY);
+                        reqFile.onsuccess = () => {
+                            if (reqFile.result) {
+                                loadedFileName = reqFile.result;
+                            }
+                            processData();
+                        };
                     }
                 };
             } catch (e) {
@@ -1327,11 +1350,11 @@
             const fieldsHtml = activeWithIndex.map(({ config, headerIndex }) => {
                 const record = person.records[config.raw];
                 let displayValue = '-';
-                const displayDate = record ? record.dateStr : 'N/A';
-                let ageHtml = '';
-
                 const isBirth = isBirthdateField(config.raw);
                 const isFarming = config.raw.includes('就農');
+                const isContentPreferred = isContentPreferredField(config.raw);
+                const displayDate = record ? (isContentPreferred ? (record.content || record.dateStr) : record.dateStr) : 'N/A';
+                let ageHtml = '';
 
                 if (record && (isBirth || isFarming)) {
                     let rawVal = '';
@@ -1343,27 +1366,31 @@
                         rawVal = record.content.trim();
                     }
 
-                    // データが空の場合はスキップ
-                    if (!rawVal || rawVal === '-' || rawVal.trim() === '') {
-                        displayValue = '-';
-                        // ageHtmlは空のまま
+                    if (isContentPreferred) {
+                        // この項目は内容表示を優先
+                        displayValue = (record.content && record.content.trim() !== '' && record.content !== '-') ? record.content.trim() : '-';
                     } else {
-                        // デバッグ：実際のデータ値をコンソールに出力
-                        console.log(`Field: ${config.raw}, Raw: "${rawVal}", Content: "${record.content}", DateStr: "${record.dateStr}"`);
-
-                        // 和暦形式かチェック（R/H/S/T/M + 数字.月.日）
-                        const warekiMatch = rawVal.match(/^([RHSMT])(\d+)\.(\d+)\.(\d+)$/);
-
-                        if (warekiMatch) {
-                            // すでに和暦形式の場合はそのまま表示
-                            displayValue = rawVal;
+                        // データが空の場合はスキップ
+                        if (!rawVal || rawVal === '-' || rawVal.trim() === '') {
+                            displayValue = '-';
                         } else {
-                            // 和暦をメイン表示に
-                            const warekiVal = toWareki(rawVal);
-                            if (warekiVal && warekiVal !== rawVal) {
-                                displayValue = warekiVal;
+                            // デバッグ：実際のデータ値をコンソールに出力
+                            console.log(`Field: ${config.raw}, Raw: "${rawVal}", Content: "${record.content}", DateStr: "${record.dateStr}"`);
+
+                            // 和暦形式かチェック（R/H/S/T/M + 数字.月.日）
+                            const warekiMatch = rawVal.match(/^([RHSMT])(\d+)\.(\d+)\.(\d+)$/);
+
+                            if (warekiMatch) {
+                                // すでに和暦形式の場合はそのまま表示
+                                displayValue = rawVal;
                             } else {
-                                displayValue = formatToJapaneseDate(rawVal);
+                                // 和暦をメイン表示に
+                                const warekiVal = toWareki(rawVal);
+                                if (warekiVal && warekiVal !== rawVal) {
+                                    displayValue = warekiVal;
+                                } else {
+                                    displayValue = formatToJapaneseDate(rawVal);
+                                }
                             }
                         }
                     }
@@ -1379,14 +1406,17 @@
                     const ageAlias = config.ageAlias || '年齢';
                     if (age !== null) ageHtml += `<div class="field-age">${escapeHtml(ageAlias)}: ${age}才</div>`;
                 }
+
+                const displayDateWareki = record ? (isContentPreferred ? (record.content || toWareki(record.dateStr)) : toWareki(record.dateStr)) : 'N/A';
+
                 return `            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
                 <div class="card-field-handle">⋮⋮</div>
                 <div class="field-label">${escapeHtml(config.alias)}</div>
-                <div class="field-value">
+                <div class="field-value" data-item-key="${escapeHtml(config.raw)}">
                     ${escapeHtml(displayValue)}
                     ${ageHtml}
                 </div>
-                <div class="field-date">📅 ${escapeHtml(displayDate)}</div>
+                <div class="field-date">📅 ${escapeHtml(displayDateWareki)}</div>
             </div>
         `;
             }).join('');
@@ -1490,6 +1520,7 @@
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
                 store.delete(DATA_KEY);
+                try { store.delete(FILENAME_KEY); } catch (e) { }
 
                 // Complete the transaction before reload
                 await new Promise((resolve, reject) => {
