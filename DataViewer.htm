@@ -1351,7 +1351,7 @@
                 const record = person.records[config.raw];
                 let displayValue = '-';
                 const isBirth = isBirthdateField(config.raw);
-                const isFarming = config.raw.includes('就農');
+                const isFarming = config.raw === '就農';
                 const isContentPreferred = isContentPreferredField(config.raw);
                 const displayDate = record ? (isContentPreferred ? (record.content || record.dateStr) : record.dateStr) : 'N/A';
                 let ageHtml = '';

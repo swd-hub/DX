@@ -1470,7 +1470,7 @@
                 let ageHtml = '';
 
                 const isBirth = isBirthdateField(config.raw);
-                const isFarming = config.raw.includes('就農');
+                const isFarming = config.raw === '就農';
 
                 if (record && (isBirth || isFarming)) {
                     let rawVal = '';
