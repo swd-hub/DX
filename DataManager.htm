@@ -1465,8 +1465,8 @@
             const fieldsHtml = activeWithIndex.map(({ config, headerIndex }) => {
                 const record = person.records[config.raw];
                 let displayValue = '-';
-                const isContentPreferred = isContentPreferredField(config.raw);
-                const displayDate = record ? (isContentPreferred ? (record.content || record.dateStr) : record.dateStr) : 'N/A';
+			const isContentPreferred = isContentPreferredField(config.raw);
+			const displayDate = record ? record.dateStr : 'N/A';  // 常にdateStrを使用
                 let ageHtml = '';
 
                 const isBirth = isBirthdateField(config.raw);
@@ -1521,7 +1521,7 @@
                     if (age !== null) ageHtml += `<div class="field-age">${escapeHtml(ageAlias)}: ${age}才</div>`;
                 }
 
-                const displayDateWareki = record ? (isContentPreferred ? (record.content || toWareki(record.dateStr)) : toWareki(record.dateStr)) : 'N/A';
+				const displayDateWareki = record ? toWareki(record.dateStr) : 'N/A';  
 
                 return `            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
                 <div class="card-field-handle">⋮⋮</div>
