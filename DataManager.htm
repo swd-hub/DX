@@ -209,6 +209,25 @@
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
+            position: relative;
+        }
+
+        .card-field::before {
+            content: attr(data-card-order);
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: 800;
+            font-size: 0.75rem;
+            z-index: 1;
         }
 
         .card-field:hover {
@@ -455,6 +474,22 @@
             overflow-y: auto;
         }
 
+        .header-setting-item::before {
+            content: attr(data-order);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: 800;
+            font-size: 0.85rem;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
         .header-setting-item {
             display: flex;
             align-items: center;
@@ -465,11 +500,26 @@
             border-radius: 8px;
             transition: all 0.2s;
             border: 1px solid transparent;
+            cursor: move;
+            user-select: none;
+            draggable: true;
         }
 
         .header-setting-item:hover {
             background: #f1f5f9;
             border-color: var(--border);
+        }
+
+        .header-setting-item.dragging-settings {
+            opacity: 0.5;
+            background: rgba(79, 70, 229, 0.1);
+            border-color: var(--primary);
+        }
+
+        .header-setting-item.drag-over {
+            background: rgba(79, 70, 229, 0.15);
+            border-top: 3px solid var(--primary);
+            padding-top: 7px;
         }
 
         .header-setting-item input[type="checkbox"] {
@@ -633,7 +683,7 @@
             <h3>2️⃣ 絞り込み条件</h3>
             <input type="text" id="globalSearch"
                 style="width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;"
-                placeholder="名前を検索..." oninput="renderView()">
+                placeholder="名前を検索...」 oninput="renderView()">
             <p style="font-size: 0.75rem; margin: 10px 0 5px 0; color: #64748b;">年齢計算の基準日:</p>
             <input type="date" id="dateFilter"
                 style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; box-sizing: border-box;"
@@ -641,13 +691,13 @@
 
             <div style="margin-top: 15px; font-size: 0.85rem; color: #334155;">
                 <strong>表示判定の基準：</strong><br>
-                新規就農日がない場合の遡り年数(X):
+                新規就農日がない場合の遡り年数(X):<br>
                 <input type="number" id="backwardYearsZ" value="4" min="1" oninput="updateViewWithSave()"
-                    style="width: 100px; padding: 4px; border: 1px solid var(--border); border-radius: 4px;"> 年
-                <br>
-                就農後の年数(Y):
+                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;"> 年
+                <br><br>
+                就農後の年数(Y):<br>
                 <input type="number" id="afterFarmingYearsY" value="1" min="0" oninput="updateViewWithSave()"
-                    style="width: 100px; padding: 4px; border: 1px solid var(--border); border-radius: 4px;"> 年
+                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box;"> 年
                 <div style="margin-top: 8px; font-size: 0.75rem; color: #666; line-height: 1.4;">
                     ※「青年等就農計画推進会議」の「新規就農」がある場合は判定が基準日より5年以内、<br>
                     　無い場合は最も新しい記録が基準日よりX年以内の対象者を表示します。<br>
@@ -662,7 +712,7 @@
 
         <div class="setting-section">
             <h3>3️⃣ 表示項目の設定</h3>
-            <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 8px 0;">表示画面のカード上でドラッグして並び替え・並びは自動保存</p>
+            <p style="font-size: 0.75rem; color: #64748b; margin: 0 0 8px 0;">表示画面のカード上でドラッグして並び替え・並びは自動保存<br>下の項目をドラッグで上下移動・番号が自動変更</p>
             <div style="display:flex; gap:10px; margin-bottom:10px;">
                 <button type="button" onclick="toggleAllHeaders(true)"
                     style="font-size:0.75rem; padding:4px 8px; cursor:pointer;">全てチェック</button>
@@ -724,6 +774,8 @@
         let filteredPeople = [];
         let ageShowFlags = {};
         let draggedIndex = null;
+        let settingsDraggedIndex = null;
+        let settingsDragOverIndex = null;
 
         const BIRTHDATE_KEYWORDS = ['生年月日', '生年月', '生年', 'birthdate', 'birth', '誕生日', 'birthday'];
         const FURIGANA_KEYWORDS = ['ふりがな', 'フリガナ', '読み', 'よみ', 'furigana', 'yomi'];
@@ -734,7 +786,6 @@
             const lower = itemName.toLowerCase();
             return CONTENT_PREFERRED_KEYWORDS.some(k => lower.includes(k.toLowerCase()));
         }
-
 
         function saveColumnOrder() {
             if (headerConfigs.length === 0) return;
@@ -782,7 +833,6 @@
             saveFilterSettings();
             renderView();
         }
-
 
         function toggleAllHeaders(activeState) {
             headerConfigs.forEach(c => c.active = activeState);
@@ -839,7 +889,7 @@
             let normalized = dateStr.trim().replace(/\s+/g, ''); // 1. 空白除去
 
             // 2. 和暦パターン (R8.3.6 等)
-            const warekiMatch = normalized.match(/^([MTSHR])(\d+)[./-](\d+)[./-](\d+)$/);
+            const warekiMatch = normalized.match(/^([MTSHR])(\\d+)[./-](\\d+)[./-](\\d+)$/);
             if (warekiMatch) {
                 const [, era, year, month, day] = warekiMatch;
                 const baseYear = wareki[era];
@@ -905,7 +955,7 @@
         }
 
         function calculateAge(birthDateStr, referenceDateVal) {
-            console.log(`calculateAge input: "${birthDateStr}", ref: "${referenceDateVal}"`);
+            console.log(`calculateAge input: \"${birthDateStr}\", ref: \"${referenceDateVal}\"`);
             const birthDate = parseDate(birthDateStr);
 
             if (!birthDate.valid) {
@@ -1201,8 +1251,7 @@
                 const handleAgeAlias = `headerConfigs[${i}].ageAlias = this.value; renderView(); saveColumnOrder();`;
 
                 let inner = `
-            <div class="header-setting-item">
-                <div style="cursor:grab; color:#ccc; margin-right:4px;" title="ドラッグで並び替え">⋮⋮</div>
+            <div class="header-setting-item" data-order="${i + 1}" data-settings-index="${i}" draggable="true">
                 <input type="checkbox" ${config.active ? 'checked' : ''} onchange="${handleChange}">
                 <input type="text" value="${escapeHtml(config.alias)}" oninput="${handleAlias}">
             </div>
@@ -1211,8 +1260,7 @@
                     const isChecked = config.showAge ? 'checked' : '';
                     inner = `
                 <div class="birthdate-group">
-                    <div class="header-setting-item">
-                        <div style="cursor:grab; color:#ccc; margin-right:4px;" title="ドラッグで並び替え">⋮⋮</div>
+                    <div class="header-setting-item" data-order="${i + 1}" data-settings-index="${i}" draggable="true">
                         <input type="checkbox" ${config.active ? 'checked' : ''} onchange="${handleChange}">
                         <input type="text" value="${escapeHtml(config.alias)}" oninput="${handleAlias}">
                     </div>
@@ -1226,12 +1274,67 @@
                 return inner;
             }).join('');
 
-            // Re-bind drag events for settings list if we want to sort there too (Optional, but user said "reorder settings").
-            // The user said "remember check and order". 
-            // The current drag-drop is on the CARD fields. 
-            // The previous implementation had drag-drop on cards affecting headerConfigs.
-            // Let's ensure the settings list also reflects this or allows it. 
-            // For now, the card view drag-drop controls the order.
+            // Re-bind drag events for settings list
+            setupHeaderSettingsDragDrop();
+        }
+
+        function setupHeaderSettingsDragDrop() {
+            const container = document.getElementById('headerSettings');
+            if (!container) return;
+
+            const items = container.querySelectorAll('.header-setting-item[data-settings-index]');
+
+            items.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    settingsDraggedIndex = parseInt(item.getAttribute('data-settings-index'), 10);
+                    item.classList.add('dragging-settings');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(settingsDraggedIndex));
+                });
+
+                item.addEventListener('dragend', (e) => {
+                    item.classList.remove('dragging-settings');
+                    items.forEach(i => i.classList.remove('drag-over'));
+                    settingsDraggedIndex = null;
+                    settingsDragOverIndex = null;
+                });
+
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    const toIndex = parseInt(item.getAttribute('data-settings-index'), 10);
+                    if (toIndex !== settingsDraggedIndex) {
+                        item.classList.add('drag-over');
+                        settingsDragOverIndex = toIndex;
+                    }
+                });
+
+                item.addEventListener('dragleave', (e) => {
+                    item.classList.remove('drag-over');
+                });
+
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+
+                    const toIndex = parseInt(item.getAttribute('data-settings-index'), 10);
+                    if (toIndex === settingsDraggedIndex || settingsDraggedIndex === null) return;
+
+                    // 配列内で移動
+                    const moved = headerConfigs.splice(settingsDraggedIndex, 1)[0];
+                    let insertIndex = toIndex;
+                    if (settingsDraggedIndex < toIndex) {
+                        insertIndex--;
+                    }
+                    headerConfigs.splice(insertIndex, 0, moved);
+
+                    saveColumnOrder();
+                    renderHeaderSettings();
+                    renderView();
+
+                    item.classList.remove('drag-over');
+                });
+            });
         }
 
         function toggleAgeDisplay(index) {
@@ -1465,8 +1568,8 @@
             const fieldsHtml = activeWithIndex.map(({ config, headerIndex }) => {
                 const record = person.records[config.raw];
                 let displayValue = '-';
-			const isContentPreferred = isContentPreferredField(config.raw);
-			const displayDate = record ? record.dateStr : 'N/A';  // 常にdateStrを使用
+                const isContentPreferred = isContentPreferredField(config.raw);
+                const displayDate = record ? record.dateStr : 'N/A';  // 常にdateStrを使用
                 let ageHtml = '';
 
                 const isBirth = isBirthdateField(config.raw);
@@ -1490,10 +1593,10 @@
                         // ageHtmlは空のまま
                     } else {
                         // デバッグ：実際のデータ値をコンソールに出力
-                        console.log(`Field: ${config.raw}, Raw: "${rawVal}", Content: "${record.content}", DateStr: "${record.dateStr}"`);
+                        console.log(`Field: ${config.raw}, Raw: \"${rawVal}\", Content: \"${record.content}\", DateStr: \"${record.dateStr}\"`);
 
                         // 和暦形式かチェック（R/H/S/T/M + 数字.月.日）
-                        const warekiMatch = rawVal.match(/^([RHSMT])(\d+)\.(\d+)\.(\d+)$/);
+                        const warekiMatch = rawVal.match(/^([RHSMT])(\\d+)\\.(\\d+)\\.(\\d+)$/);
 
                         if (warekiMatch) {
                             // すでに和暦形式の場合はそのまま表示
@@ -1521,9 +1624,9 @@
                     if (age !== null) ageHtml += `<div class="field-age">${escapeHtml(ageAlias)}: ${age}才</div>`;
                 }
 
-				const displayDateWareki = record ? toWareki(record.dateStr) : 'N/A';  
+                const displayDateWareki = record ? toWareki(record.dateStr) : 'N/A';
 
-                return `            <div class="card-field" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
+                return `            <div class="card-field" data-card-order="${headerIndex + 1}" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
                 <div class="card-field-handle">⋮⋮</div>
                 <div class="field-label">${escapeHtml(config.alias)}</div>
                 <div class="field-value" data-item-key="${escapeHtml(config.raw)}" ondblclick="startEdit(event, this.dataset.itemKey, false)">
@@ -1649,6 +1752,7 @@
                 alert('データのクリアに失敗しました。ページを手動で再読み込みしてください。');
             }
         }
+
         function startEdit(event, itemKey, isDateField = false) {
             const div = event.currentTarget;
             if (div.querySelector('textarea')) return;
@@ -1691,7 +1795,7 @@
                 finished = true;
 
                 const newVal = area.value.trim();
-                console.log(`[Edit] Finishing: item="${itemKey}", newVal="${newVal}"`);
+                console.log(`[Edit] Finishing: item=\"${itemKey}\", newVal=\"${newVal}\"`);
 
                 if (!record) {
                     // 新規追加
