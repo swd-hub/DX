@@ -261,6 +261,12 @@
             font-weight: 500;
             word-break: break-word;
             flex-grow: 1;
+            cursor: text;
+        }
+
+        .field-value:hover {
+            opacity: 0.8;
+            text-decoration: underline dotted #4f46e5;
         }
 
         .field-date {
@@ -582,6 +588,19 @@
             border-radius: 4px;
             font-size: 0.8rem;
             box-sizing: border-box;
+        }
+
+        /* 編集用テキストエリア */
+        .edit-textarea {
+            width: 100%;
+            border: 2px solid var(--primary) !important;
+            border-radius: 8px !important;
+            padding: 8px !important;
+            font-family: inherit !important;
+            font-size: 1.2rem !important;
+            color: var(--text-main) !important;
+            resize: vertical;
+            margin: 0 !important;
         }
 
         /* プリント対応 */
@@ -1538,13 +1557,11 @@
                 const isBirth = isBirthdateField(config.raw);
                 const isFarming = config.raw === '就農';
                 const isContentPreferred = isContentPreferredField(config.raw);
-                const displayDate = record ? record.dateStr : 'N/A';
                 let ageHtml = '';
 
                 if (record && (isBirth || isFarming)) {
                     let rawVal = '';
 
-                    // 生年月日と就農については、項目の「年月日」（第一列）を優先的に使用する
                     if (record.dateStr && record.dateStr.trim() !== '' && record.dateStr !== '-') {
                         rawVal = record.dateStr.trim();
                     } else if (record.content && record.content.trim() !== '' && record.content !== '-') {
@@ -1585,14 +1602,18 @@
 
                 const displayDateWareki = record ? toWareki(record.dateStr) : 'N/A';
 
-                return `<div class="card-field" data-card-order="${headerIndex + 1}" draggable="true" data-header-index="${headerIndex}" title="ドラッグで並び替え">
+                // itemKey をエスケープして、HTML解釈を防ぐ
+                const escapedItemKey = escapeHtml(config.raw);
+                const encodedItemKey = config.raw.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+                return `<div class="card-field" data-card-order="${headerIndex + 1}" draggable="true" data-header-index="${headerIndex}" data-item-key="${escapedItemKey}" title="ドラッグで並び替え、ダブルクリックで編集">
                 <div class="card-field-handle">⋮⋮</div>
                 <div class="field-label">${escapeHtml(config.alias)}</div>
-                <div class="field-value">
+                <div class="field-value" ondblclick="startEdit(event, '${encodedItemKey}', false)" style="cursor: text;">
                     ${escapeHtml(displayValue)}
                     ${ageHtml}
                 </div>
-                <div class="field-date">📅 ${escapeHtml(displayDateWareki)}</div>
+                <div class="field-date" ondblclick="startEdit(event, '${encodedItemKey}', true)" title="ダブルクリックで日付を編集" style="cursor: text;">📅 ${escapeHtml(displayDateWareki)}</div>
             </div>`;
             }).join('');
 
@@ -1612,6 +1633,7 @@
         </div>
     `;
         }
+        
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -1630,6 +1652,131 @@
             if (e.key === 'ArrowLeft') changePage(-1);
             if (e.key === 'ArrowRight') changePage(1);
         });
+
+function startEdit(event, itemKey, isDateField = false) {
+            event.stopPropagation();
+            event.preventDefault();
+            
+            // デコード処理
+            const decodedItemKey = itemKey
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&');
+
+            const div = event.currentTarget;
+            if (div.querySelector('textarea')) return;
+
+            const person = filteredPeople[currentIndex];
+            let record = person.records[decodedItemKey];
+
+            // 日付として処理する項目を厳密に限定
+            const isStrictDateItem = (typeof isBirthdateField === 'function' ? isBirthdateField(decodedItemKey) : decodedItemKey.includes('生年月日')) || 
+                                     (decodedItemKey === '就農') || 
+                                     (decodedItemKey.includes('就農日'));
+
+            let currentVal = '';
+            
+            // 編集開始時の表示テキストを決定
+            if (isDateField) {
+                // 日付アイコンをクリックした場合
+                currentVal = (record && record.originalDate && record.originalDate !== '-') ? record.originalDate : '';
+            } else if (record) {
+                // 内容部分をクリックした場合
+                if (isStrictDateItem) {
+                    // 日付属性の項目の場合は日付を表示
+                    currentVal = (record.originalDate && record.originalDate !== '-') ? record.originalDate : (record.content || '');
+                } else {
+                    // 特記事項などのテキスト項目の場合は、そのままの内容を表示
+                    currentVal = record.content || '';
+                }
+            }
+
+            const area = document.createElement('textarea');
+            area.value = currentVal;
+            area.className = 'edit-textarea';
+            area.rows = 5;
+            area.style.minHeight = '120px';
+            area.style.height = 'auto';
+            area.style.overflowY = 'auto';
+
+            div.innerHTML = '';
+            div.appendChild(area);
+            
+            // テキスト量に合わせて高さを自動調整
+            area.style.height = area.scrollHeight + 'px';
+            area.focus();
+
+            let finished = false;
+            const finishEdit = () => {
+                if (finished) return;
+                finished = true;
+
+                const newVal = area.value.trim();
+
+                if (!record) {
+                    const now = new Date();
+                    const y = now.getFullYear();
+                    const m = now.getMonth() + 1;
+                    const d = now.getDate();
+                    const todayStr = `${y}.${m}.${d}`;
+
+                    record = {
+                        originalDate: todayStr,
+                        dateStr: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+                        ts: now.getTime(),
+                        valid: true,
+                        name: person.name,
+                        item: decodedItemKey,
+                        content: ''
+                    };
+                    allParsedRecords.push(record);
+                    person.records[decodedItemKey] = record;
+                }
+
+                if (isDateField) {
+                    // 日付型フィールドを直接編集した場合
+                    record.originalDate = newVal;
+                    const p = parseDate(newVal);
+                    record.dateStr = p.str;
+                    record.ts = p.ts;
+                    record.valid = p.valid;
+                    if (isStrictDateItem) record.content = newVal;
+                } else if (isStrictDateItem) {
+                    // 生年月日などの日付項目自体を編集した場合
+                    record.originalDate = newVal;
+                    const p = parseDate(newVal);
+                    record.dateStr = p.str;
+                    record.ts = p.ts;
+                    record.valid = p.valid;
+                    record.content = newVal;
+                } else {
+                    // 特記事項などの通常テキスト項目（日付に変換しない）
+                    record.content = newVal;
+                }
+
+                syncTextarea();
+            };
+
+            area.onblur = finishEdit;
+            area.onkeydown = (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    finishEdit();
+                }
+                if (e.key === 'Escape') {
+                    finished = true;
+                    renderView();
+                }
+                if (e.key !== 'Escape') {
+                    setTimeout(() => {
+                        area.style.height = 'auto';
+                        area.style.height = area.scrollHeight + 'px';
+                    }, 0);
+                }
+            };
+        }
 
         function setupDragDrop() {
             const el = document.getElementById('cardView');
