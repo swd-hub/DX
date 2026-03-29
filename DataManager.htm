@@ -748,8 +748,17 @@
                     style="font-size:0.75rem; padding:4px 8px; cursor:pointer;">全て解除</button>
             </div>
             <div id="headerSettings"></div>
-            <button type="button" class="btn btn-outline" id="btnResetOrder" onclick="resetColumnOrder()"
-                style="margin-top:10px; display:none;">並びを解除</button>
+            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                <button type="button" onclick="downloadColumnOrderJSON()"
+                    style="flex:1; padding:10px 12px; border-radius:12px; border:2px solid #059669; background:transparent; color:#059669; font-weight:bold; font-size:0.9rem; cursor:pointer; transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(5,150,105,0.08)'" onmouseout="this.style.background='transparent'"
+                    title="現在のカード並び順をJSONファイルに保存">💾 並び順をJSON保存</button>
+                <button type="button" onclick="document.getElementById('jsonOrderFileInput').click()"
+                    style="flex:1; padding:10px 12px; border-radius:12px; border:2px solid var(--primary); background:transparent; color:var(--primary); font-weight:bold; font-size:0.9rem; cursor:pointer; transition:all 0.2s;"
+                    onmouseover="this.style.background='rgba(79,70,229,0.08)'" onmouseout="this.style.background='transparent'"
+                    title="JSONファイルから並び順を読み込む">📂 並び順をJSON読込</button>
+                <input type="file" id="jsonOrderFileInput" accept=".json" style="display:none" onchange="loadColumnOrderFromJSON(event)">
+            </div>
         </div>
 
         <div class="setting-section" style="border-top: 2px solid var(--border); padding-top: 20px;">
@@ -825,8 +834,80 @@
                     ageAlias: c.ageAlias || '年齢'
                 }));
                 localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(dataToSave));
-                document.getElementById('btnResetOrder').style.display = '';
             } catch (e) { }
+        }
+
+        function downloadColumnOrderJSON() {
+            if (headerConfigs.length === 0) {
+                alert('保存するカード設定がありません。先にCSVデータを読み込んでください。');
+                return;
+            }
+            const dataToSave = headerConfigs.map((c, i) => ({
+                order: i + 1,
+                raw: c.raw,
+                alias: c.alias,
+                active: c.active,
+                showAge: c.showAge || false,
+                ageAlias: c.ageAlias || '年齢'
+            }));
+            const json = JSON.stringify({ columnOrder: dataToSave }, null, 2);
+            const now = new Date();
+            const timestamp = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0');
+            const filename = `columnOrder_${timestamp}.json`;
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function loadColumnOrderFromJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            event.target.value = '';
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    const order = parsed.columnOrder;
+                    if (!Array.isArray(order)) throw new Error('columnOrder が見つかりません');
+
+                    // 既存の headerConfigs を JSON の並び順に並べ替え・設定を上書き
+                    const byRaw = {};
+                    headerConfigs.forEach(c => { byRaw[c.raw] = c; });
+
+                    const newConfigs = [];
+                    order.forEach(item => {
+                        if (byRaw[item.raw]) {
+                            const c = byRaw[item.raw];
+                            c.alias   = item.alias   ?? c.alias;
+                            c.active  = item.active  ?? c.active;
+                            c.showAge = item.showAge ?? c.showAge;
+                            c.ageAlias = item.ageAlias ?? c.ageAlias;
+                            newConfigs.push(c);
+                            delete byRaw[item.raw];
+                        }
+                    });
+                    // JSON に存在しない項目は末尾に追加
+                    Object.values(byRaw).forEach(c => newConfigs.push(c));
+
+                    headerConfigs = newConfigs;
+                    saveColumnOrder();
+                    renderHeaderSettings();
+                    renderView();
+                    alert('並び順をJSONから読み込みました。');
+                } catch (err) {
+                    alert('JSONの読み込みに失敗しました。\n' + err.message);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
         }
 
         function loadColumnOrder() {
@@ -869,7 +950,6 @@
 
         function resetColumnOrder() {
             try { localStorage.removeItem(COLUMN_ORDER_KEY); } catch (e) { }
-            document.getElementById('btnResetOrder').style.display = 'none';
             processData();
         }
 
@@ -1910,7 +1990,7 @@ function startEdit(event, itemKey, isDateField = false) {
             renderHeaderSettings();
             renderView();
             setupDragDrop();
-            if (loadColumnOrder()) document.getElementById('btnResetOrder').style.display = '';
+            loadColumnOrder();
 
             loadDataFromDB();
         });
