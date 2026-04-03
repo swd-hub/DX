@@ -509,6 +509,9 @@
 
             <div id="configSection" class="card no-print" style="display:none;">
                 <h3>2. 項目の表示設定</h3>
+             <p style="font-size:0.85rem; color:#666; margin-top:10px; margin-bottom:0;">
+                下の各枠で<strong>表示順序を設定</strong>すると、3. 表題（タイトル）に表示されます。<br>
+             </p>
                 <div class="config-save-area">
                     <span style="font-weight: bold;">設定のファイル管理：</span>
                     <button class="btn btn-sm btn-warning"
@@ -551,7 +554,7 @@
                 oninput="renderTable()">
             <p style="font-size:0.85rem; color:#666; margin-top:10px; margin-bottom:0;">
                 下の表で、見出し（ヘッダー）をマウスで<strong>左右にドラッグ＆ドロップ</strong>すると順番を入れ替えられます。<br>
-                「2. 項目の表示設定」の数字も連動して変わります。
+                「2. 項目の表示設定」の表示順序も連動して変わります。
             </p>
         </div>
 
@@ -1166,11 +1169,25 @@
 
                     if (c.fDate) items = items.filter(it => it.date.includes(c.fDate));
                     if (c.fContent) {
-                        const keywords = c.fContent.trim().split(/\s+/).filter(k => k.length > 0);
-                        items = items.filter(it => {
-                            const content = it.content.toLowerCase();
-                            return keywords.every(keyword => content.includes(keyword.toLowerCase()));
-                        });
+					// ...
+					const filterText = c.fContent.trim();
+					if (filterText.includes(' OR ')) {
+					    // "OR"が含まれている場合は、OR検索
+					    const keywords = filterText.split(' OR ').map(k => k.trim()).filter(k => k.length > 0);
+					    items = items.filter(it => {
+					        const content = it.content.toLowerCase();
+					        // いずれかのキーワードが含まれていればOK (some = OR検索)
+					        return keywords.some(keyword => content.includes(keyword.toLowerCase()));
+					    });
+					} else {
+					    // それ以外は従来のAND検索
+					    const keywords = filterText.split(/\\s+/).filter(k => k.length > 0);
+					    items = items.filter(it => {
+					        const content = it.content.toLowerCase();
+					        return keywords.every(keyword => content.includes(keyword.toLowerCase()));
+					    });
+					}
+					// ...
                     }
 
                     // 内容フィルター使用時のみ行を除外する
