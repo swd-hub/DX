@@ -510,8 +510,15 @@
             <div id="configSection" class="card no-print" style="display:none;">
                 <h3>2. 項目の表示設定</h3>
              <p style="font-size:0.85rem; color:#666; margin-top:10px; margin-bottom:0;">
-                下の各枠で<strong>表示順序を設定</strong>すると、3. 表題（タイトル）に表示されます。<br>
+                下の各枠で<strong>表示順序を設定</strong>すると、左列から表示されます。<br>
              </p>
+             <div style="font-size:0.8rem; color:#555; background:#f0f4ff; border:1px solid #c7d2fe; border-radius:6px; padding:8px 12px; margin-top:8px; margin-bottom:0; line-height:1.8;">
+                 💡 <strong>内容フィルターの使い方：</strong>
+                 <span style="margin-left:8px;">AND：<code>就農 計画</code>（スペース区切り）</span>
+                 <span style="margin-left:8px;">OR：<code>就農 OR 研修</code></span>
+                 <span style="margin-left:8px;">NOT：<code>-中止</code>（ハイフン prefix）</span>
+                 <span style="margin-left:8px;">組み合わせ例：<code>就農 OR 研修 -中止</code></span>
+             </div>
                 <div class="config-save-area">
                     <span style="font-weight: bold;">設定のファイル管理：</span>
                     <button class="btn btn-sm btn-warning"
@@ -1011,7 +1018,7 @@
             <div class="column-filters">
                 <div><span>日付フィルタ</span><input type="text" value="${config.fDate}" placeholder="2025/01" oninput="headerConfigs[${i}].fDate=this.value; renderTable()"></div>
                 <div><span>頻度(以上)</span><input type="number" value="${config.fFreq}" min="1" oninput="headerConfigs[${i}].fFreq=parseInt(this.value); renderTable()"></div>
-                <div><span>内容フィルタ</span><input type="text" value="${config.fContent}" placeholder="キーワード（スペース区切りでAND検索）" oninput="headerConfigs[${i}].fContent=this.value; renderTable()"></div>
+                <div><span>内容フィルタ</span><input type="text" value="${config.fContent}" placeholder="AND: スペース区切り / OR: A OR B / NOT: -除外語" oninput="headerConfigs[${i}].fContent=this.value; renderTable()"></div>
             </div>
         </div>
     `).join('');
@@ -1171,20 +1178,34 @@
                     if (c.fContent) {
 					// ...
 					const filterText = c.fContent.trim();
+					// NOT キーワード（-で始まるトークン）を先に抽出
+					const extractNot = (tokens) => {
+					    const notKw = tokens.filter(k => k.startsWith('-') && k.length > 1).map(k => k.slice(1).toLowerCase());
+					    const posKw = tokens.filter(k => !k.startsWith('-'));
+					    return { posKw, notKw };
+					};
 					if (filterText.includes(' OR ')) {
-					    // "OR"が含まれている場合は、OR検索
-					    const keywords = filterText.split(' OR ').map(k => k.trim()).filter(k => k.length > 0);
+					    // OR検索（各トークンにNOT(-prefix)も対応）
+					    const orGroups = filterText.split(' OR ').map(k => k.trim()).filter(k => k.length > 0);
 					    items = items.filter(it => {
 					        const content = it.content.toLowerCase();
-					        // いずれかのキーワードが含まれていればOK (some = OR検索)
-					        return keywords.some(keyword => content.includes(keyword.toLowerCase()));
+					        return orGroups.some(group => {
+					            const tokens = group.split(/\s+/).filter(k => k.length > 0);
+					            const { posKw, notKw } = extractNot(tokens);
+					            const posOk = posKw.length === 0 || posKw.every(k => content.includes(k.toLowerCase()));
+					            const notOk = notKw.every(k => !content.includes(k));
+					            return posOk && notOk;
+					        });
 					    });
 					} else {
-					    // それ以外は従来のAND検索
-					    const keywords = filterText.split(/\\s+/).filter(k => k.length > 0);
+					    // AND検索（NOTも対応）
+					    const tokens = filterText.split(/\s+/).filter(k => k.length > 0);
+					    const { posKw, notKw } = extractNot(tokens);
 					    items = items.filter(it => {
 					        const content = it.content.toLowerCase();
-					        return keywords.every(keyword => content.includes(keyword.toLowerCase()));
+					        const posOk = posKw.length === 0 || posKw.every(k => content.includes(k.toLowerCase()));
+					        const notOk = notKw.every(k => !content.includes(k));
+					        return posOk && notOk;
 					    });
 					}
 					// ...
