@@ -526,6 +526,11 @@
                     <button class="btn btn-sm btn-success" onclick="exportConfigToFile()">💾 設定を保存</button>
                     <button class="btn btn-sm" style="background: #ef4444; color: white;" onclick="resetConfig()">🔄
                         リセット</button>
+                    <select id="jumpToCardSelect"
+                        onchange="jumpToCard(this.value); this.value=''"
+                        style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.85rem; background: white; cursor: pointer; max-width: 220px; display: none;">
+                        <option value="">📍 項目へジャンプ…</option>
+                    </select>
                     <input type="file" id="configFileInput" style="display:none" accept=".json"
                         onchange="importConfigFromFile(event)">
                 </div>
@@ -1000,7 +1005,7 @@
         function renderHeaderConfigUI() {
             const container = document.getElementById('headerSettings');
             container.innerHTML = headerConfigs.map((config, i) => `
-        <div class="header-item-card ${config.isNameColumn ? 'name-card' : ''}">
+        <div class="header-item-card ${config.isNameColumn ? 'name-card' : ''}" id="headerCard_${i}">
             <div class="source-name">${config.sourceName}</div>
             <div class="input-row">
                 <label>表での項目名</label>
@@ -1022,6 +1027,35 @@
             </div>
         </div>
     `).join('');
+            updateJumpDropdown();
+        }
+
+        function updateJumpDropdown() {
+            const sel = document.getElementById('jumpToCardSelect');
+            if (!sel) return;
+            while (sel.options.length > 1) sel.remove(1);
+            // インデックス付きでソート
+            const sorted = headerConfigs
+                .map((config, i) => ({ config, i }))
+                .sort((a, b) => a.config.sourceName.localeCompare(b.config.sourceName, 'ja'));
+            sorted.forEach(({ config, i }) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = config.sourceName;
+                sel.appendChild(opt);
+            });
+            sel.style.display = headerConfigs.length > 0 ? '' : 'none';
+        }
+
+        function jumpToCard(index) {
+            if (index === '' || index === null) return;
+            const card = document.getElementById('headerCard_' + index);
+            if (!card) return;
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 一時的にハイライト
+            card.style.outline = '2px solid var(--primary)';
+            card.style.transition = 'outline 0.3s';
+            setTimeout(() => { card.style.outline = ''; }, 1500);
         }
 
         function exportConfigToFile() {
