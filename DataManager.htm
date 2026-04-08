@@ -1331,11 +1331,6 @@
             renderHeaderSettings();
             renderView();
 
-            if (!keepIndex && text.length > 0) {
-                if (window.syncTimer) clearTimeout(window.syncTimer);
-                window.syncTimer = setTimeout(() => syncTextarea(), 100);
-            }
-
             if (window.saveTimeout) clearTimeout(window.saveTimeout);
             window.saveTimeout = setTimeout(() => {
                 saveDataToDB(text, loadedFileName);
@@ -1682,46 +1677,44 @@
             }
         }
 
-function renderNameSidebar() {
-    const container = document.getElementById('nameListContainer');
-    if (filteredPeople.length === 0) {
-        container.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8;">データがありません</p>';
-        return;
-    }
+        function renderNameSidebar() {
+            const container = document.getElementById('nameListContainer');
+            if (filteredPeople.length === 0) {
+                container.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8;">データがありません</p>';
+                return;
+            }
 
-    const groups = {};
-    filteredPeople.forEach((person, index) => {
-        const furigana = getFurigana(person);
-        const groupName = getFuriganaGroup(furigana);
-        if (!groups[groupName]) groups[groupName] = [];
-        groups[groupName].push({ person, index, furigana });
-    });
+            const groups = {};
+            filteredPeople.forEach((person, index) => {
+                const furigana = getFurigana(person);
+                const groupName = getFuriganaGroup(furigana);
+                if (!groups[groupName]) groups[groupName] = [];
+                groups[groupName].push({ person, index, furigana });
+            });
 
-    const sortedGroups = Object.keys(groups).sort((a, b) => {
-        const order = ['あ行', 'か行', 'さ行', 'た行', 'な行', 'は行', 'ま行', 'や行', 'ら行', 'わ行', '他'];
-        const idxA = order.indexOf(a);
-        const idxB = order.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        if (idxA !== -1) return -1;
-        if (idxB !== -1) return 1;
-        return a.localeCompare(b);
-    });
+            const sortedGroups = Object.keys(groups).sort((a, b) => {
+                const order = ['あ行', 'か行', 'さ行', 'た行', 'な行', 'は行', 'ま行', 'や行', 'ら行', 'わ行', '他'];
+                const idxA = order.indexOf(a);
+                const idxB = order.indexOf(b);
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+                return a.localeCompare(b);
+            });
 
-    container.innerHTML = sortedGroups.map(groupName => `
-        <div class="name-list-group">
-            <div class="name-list-header">${groupName}</div>
-            ${groups[groupName]
-                .sort((a, b) => a.furigana.localeCompare(b.furigana, 'ja'))
-                .map(item => {
+            container.innerHTML = sortedGroups.map(groupName => `
+                <div class="name-list-group">
+                    <div class="name-list-header">${groupName}</div>
+                    ${groups[groupName].map(item => {
                 const isActive = (item.index === currentIndex) ? 'active' : '';
                 const fHint = item.furigana !== item.person.name ? `<span class="furigana-hint">(${escapeHtml(item.furigana)})</span>` : '';
                 return `<div class="name-item ${isActive}" onclick="jumpToPerson(${item.index})">
                             ${escapeHtml(item.person.name)}${fHint}
                         </div>`;
             }).join('')}
-        </div>
-    `).join('');
-}
+                </div>
+            `).join('');
+        }
 
         function renderCard(person, container) {
             const activeWithIndex = headerConfigs
@@ -2064,24 +2057,9 @@ function startEdit(event, itemKey, isDateField = false) {
                 return str;
             };
 
-            const isDedup = document.getElementById('enableDedup').checked;
-            let pool = allParsedRecords;
-
-            if (isDedup) {
-                const sortedPool = [...allParsedRecords].sort((a, b) => b.ts - a.ts);
-                const seen = new Map();
-                const uniqueRecords = [];
-                sortedPool.forEach(r => {
-                    const key = `${r.name}|${r.item}`;
-                    if (!seen.has(key)) {
-                        seen.set(key, true);
-                        uniqueRecords.push(r);
-                    }
-                });
-                pool = uniqueRecords;
-            }
-
-            const recordsToSave = [...pool].sort((a, b) => {
+            // CSV書き出しは常に全件（重複排除なし）で行う
+            // enableDedup は画面表示の絞り込み専用
+            const recordsToSave = [...allParsedRecords].sort((a, b) => {
                 const aW = toWareki(a.dateStr);
                 const bW = toWareki(b.dateStr);
                 const aZero = (aW === '0');
