@@ -458,7 +458,8 @@
             border-color: var(--primary);
         }
 
-        .setting-item input[type="checkbox"] {
+        .setting-item input[type="checkbox"],
+        .setting-item input[type="radio"] {
             flex-shrink: 0;
             width: 16px;
             height: 16px;
@@ -767,9 +768,19 @@
                 oninput="processData()" placeholder="年月日,名前,項目,内容&#10;の形式でCSVを貼り付け"></textarea>
             <input type="file" id="fileHidden" style="display:none" accept=".csv,.txt" onchange="handleFile(event)">
 
-            <div class="setting-item">
-                <input type="checkbox" id="enableDedup" checked onchange="processData()">
-                <label for="enableDedup">各項目の最終更新日データのみ抽出</label>
+            <div style="margin-bottom: 8px;">
+                <div class="setting-item" style="margin-bottom: 4px;">
+                    <input type="radio" name="dedupMode" id="dedupLatest" value="latest" checked onchange="processData(true)">
+                    <label for="dedupLatest">各項目の最終更新日データのみ抽出</label>
+                </div>
+                <div class="setting-item" style="margin-bottom: 4px;">
+                    <input type="radio" name="dedupMode" id="dedupFirst" value="first" onchange="processData(true)">
+                    <label for="dedupFirst">各項目の最初の日のデータのみ抽出</label>
+                </div>
+                <div class="setting-item">
+                    <input type="radio" name="dedupMode" id="dedupNone" value="none" onchange="processData(true)">
+                    <label for="dedupNone">すべてのデータを抽出</label>
+                </div>
             </div>
         </div>
 
@@ -831,7 +842,8 @@
             <button type="button" class="btn btn-primary" onclick="downloadCSV()"
                 style="width:100%; margin-bottom:15px; background: #059669;">📥 CSV保存</button>
             <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">
-                <strong id="statsRecords">0</strong> 件のレコード読込済み<br>
+                <strong id="statsParsedRecords">0</strong> 件のレコード読込済み<br>
+                <strong id="statsRecords">0</strong> 件のレコード抽出対象<br>
                 <strong id="statsPeople">0</strong> 名の人物<br>
                 <strong id="statsItems">0</strong> 個の項目
             </p>
@@ -1004,13 +1016,13 @@
 
         function updateViewWithSave() {
             saveFilterSettings();
-            renderView();
+            renderView(true);
         }
 
         function toggleAllHeaders(activeState) {
             headerConfigs.forEach(c => c.active = activeState);
             renderHeaderSettings();
-            renderView();
+            renderView(true);
             saveColumnOrder();
         }
 
@@ -1251,10 +1263,10 @@
 
             allParsedRecords.sort((a, b) => b.ts - a.ts);
 
-            const isFinalOnly = document.getElementById('enableDedup').checked;
+            const dedupMode = document.querySelector('input[name="dedupMode"]:checked').value;
             const allItems = new Set();
 
-            if (isFinalOnly) {
+            if (dedupMode === 'latest') {
                 const seen = new Map();
                 rawRecords = [];
 
@@ -1266,6 +1278,18 @@
                     }
                     allItems.add(r.item);
                 });
+            } else if (dedupMode === 'first') {
+                const oldestMap = new Map();
+                rawRecords = [];
+
+                allParsedRecords.forEach(r => {
+                    const key = `${r.name}|${r.item}`;
+                    // Overwrite with the older one (since it's sorted descending, older comes later)
+                    oldestMap.set(key, r);
+                    allItems.add(r.item);
+                });
+                rawRecords = Array.from(oldestMap.values());
+                rawRecords.sort((a, b) => b.ts - a.ts);
             } else {
                 rawRecords = allParsedRecords;
                 allParsedRecords.forEach(r => allItems.add(r.item));
@@ -1329,7 +1353,7 @@
             if (!keepIndex) currentIndex = 0;
             updateStats();
             renderHeaderSettings();
-            renderView();
+            renderView(keepIndex);
 
             if (window.saveTimeout) clearTimeout(window.saveTimeout);
             window.saveTimeout = setTimeout(() => {
@@ -1399,6 +1423,7 @@
             const uniquePeople = new Set(rawRecords.map(r => r.name));
             const uniqueItems = new Set(rawRecords.map(r => r.item));
 
+            document.getElementById('statsParsedRecords').textContent = allParsedRecords.length;
             document.getElementById('statsRecords').textContent = rawRecords.length;
             document.getElementById('statsPeople').textContent = uniquePeople.size;
             document.getElementById('statsItems').textContent = uniqueItems.size;
@@ -1413,10 +1438,10 @@
             }
 
             container.innerHTML = headerConfigs.map((config, i) => {
-                const handleChange = `headerConfigs[${i}].active = this.checked; renderView(); saveColumnOrder();`;
-                const handleAlias = `headerConfigs[${i}].alias = this.value; renderView(); saveColumnOrder();`;
+                const handleChange = `headerConfigs[${i}].active = this.checked; renderView(true); saveColumnOrder();`;
+                const handleAlias = `headerConfigs[${i}].alias = this.value; renderView(true); saveColumnOrder();`;
                 const handleAgeDisplay = `toggleAgeDisplay(${i});`;
-                const handleAgeAlias = `headerConfigs[${i}].ageAlias = this.value; renderView(); saveColumnOrder();`;
+                const handleAgeAlias = `headerConfigs[${i}].ageAlias = this.value; renderView(true); saveColumnOrder();`;
 
                 let inner = `
             <div class="header-setting-item" data-order="${i + 1}" data-settings-index="${i}" draggable="true">
@@ -1497,7 +1522,7 @@
 
                     saveColumnOrder();
                     renderHeaderSettings();
-                    renderView();
+                    renderView(true);
 
                     item.classList.remove('drag-over');
                 });
@@ -1508,7 +1533,7 @@
             headerConfigs[index].showAge = !headerConfigs[index].showAge;
             saveColumnOrder();
             renderHeaderSettings();
-            renderView();
+            renderView(true);
         }
 
         function getFilteredPeople() {
@@ -1639,7 +1664,12 @@
         }
 
         // ===== Rendering =====
-        function renderView() {
+        function renderView(keepPerson = false) {
+            let targetName = null;
+            if (keepPerson && typeof filteredPeople !== 'undefined' && filteredPeople.length > 0 && currentIndex < filteredPeople.length) {
+                targetName = filteredPeople[currentIndex].name;
+            }
+
             filteredPeople = getFilteredPeople();
             const container = document.getElementById('cardView');
             const pageInfo = document.getElementById('pageInfo');
@@ -1655,7 +1685,14 @@
                 return;
             }
 
-            if (currentIndex >= filteredPeople.length) {
+            if (targetName) {
+                const newIdx = filteredPeople.findIndex(p => p.name === targetName);
+                if (newIdx !== -1) {
+                    currentIndex = newIdx;
+                } else if (currentIndex >= filteredPeople.length) {
+                    currentIndex = 0;
+                }
+            } else if (currentIndex >= filteredPeople.length) {
                 currentIndex = 0;
             }
 
@@ -2042,7 +2079,7 @@ function startEdit(event, itemKey, isDateField = false) {
                 headerConfigs.splice(toIndex, 0, moved);
                 saveColumnOrder();
                 renderHeaderSettings();
-                renderView();
+                renderView(true);
             });
         }
 
