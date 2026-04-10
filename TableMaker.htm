@@ -136,7 +136,7 @@
 
         .column-filters {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 4px;
             margin-top: 8px;
             border-top: 1px dotted #ccc;
@@ -149,13 +149,25 @@
             font-size: 0.7rem;
         }
 
-        .column-filters input {
+        .column-filters input,
+        .column-filters textarea {
             padding: 4px;
             border: 1px solid var(--border);
             border-radius: 3px;
             font-size: 0.75rem;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        .column-filters textarea {
+            resize: vertical;
+            height: 24px;
+            min-height: 24px;
+            font-family: inherit;
+        }
+
+        .filter-full-width {
+            grid-column: 1 / -1;
         }
 
         .mode-radio {
@@ -1028,7 +1040,7 @@
             <div class="column-filters">
                 <div><span>日付フィルタ</span><input type="text" value="${config.fDate}" placeholder="2025/01" oninput="headerConfigs[${i}].fDate=this.value; renderTable()"></div>
                 <div><span>頻度(以上)</span><input type="number" value="${config.fFreq}" min="1" oninput="headerConfigs[${i}].fFreq=parseInt(this.value); renderTable()"></div>
-                <div><span>内容フィルタ</span><input type="text" value="${config.fContent}" placeholder="AND: スペース区切り / OR: A OR B / NOT: -除外語" oninput="headerConfigs[${i}].fContent=this.value; renderTable()"></div>
+                <div class="filter-full-width"><span>内容フィルタ</span><textarea rows="1" placeholder="AND: スペース区切り / OR: A OR B / NOT: -除外語" oninput="headerConfigs[${i}].fContent=this.value; renderTable()">${config.fContent}</textarea></div>
             </div>
         </div>
     `).join('');
@@ -1070,7 +1082,9 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `設定_${new Date().toISOString().slice(0, 10)}.json`;
+                let title = document.getElementById('tableTitle').value.trim();
+                let prefix = title ? `TableMaker_${title}_` : `TableMaker_`;
+                a.download = `${prefix}設定_${new Date().toISOString().slice(0, 10)}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
                 alert('✅ 設定ファイルを保存しました！');
@@ -1481,10 +1495,17 @@
             document.addEventListener('mouseup', handleMouseUp);
         }
 
-        function toggleTextPreview(format) {
-            const { headers, rows } = getTableData();
+        function toggleTextPreview(format, forceShow = false) {
             const panel = document.getElementById('dataTextPreview');
             const output = document.getElementById('dataTextOutput');
+            const currentFormat = document.getElementById('previewType').innerText.toLowerCase();
+
+            if (!forceShow && panel.style.display === 'block' && currentFormat === format) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            const { headers, rows } = getTableData();
             panel.style.display = 'block';
             document.getElementById('previewType').innerText = format.toUpperCase();
             if (format === 'csv') {
@@ -1499,13 +1520,13 @@
         }
 
         function exportCSV() {
-            toggleTextPreview('csv');
+            toggleTextPreview('csv', true);
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), document.getElementById('dataTextOutput').value], { type: 'text/csv' });
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "集計結果.csv"; a.click();
         }
 
         function exportJSON() {
-            toggleTextPreview('json');
+            toggleTextPreview('json', true);
             const blob = new Blob([document.getElementById('dataTextOutput').value], { type: 'application/json' });
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "データ.json"; a.click();
         }
