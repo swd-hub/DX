@@ -479,7 +479,7 @@
                         style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
                         <label style="font-weight: bold; cursor: pointer; display: inline-block; margin-right: 25px;">
                             <input type="checkbox" id="enableDedup" checked onchange="processData()">
-                            同じ名前・項目・内容のデータが複数年月日ある場合、最も古い日付のみ残す（チェック時）
+                            同じ名前・項目・内容のデータが複数年月日ある場合、最も新しい日付のみ残す（チェック時）
                         </label>
                         <div style="margin-top: 10px; font-size: 0.85rem; color: #666;">
                             ※ チェック OFF にするとすべてのデータを保持し、「頻度」をカウントできます
@@ -526,6 +526,7 @@
                     <button class="btn btn-sm btn-success" onclick="exportConfigToFile()">💾 設定を保存</button>
                     <button class="btn btn-sm" style="background: #ef4444; color: white;" onclick="resetConfig()">🔄
                         リセット</button>
+                    <button class="btn btn-sm" style="background: #a855f7; color: white;" onclick="resetFilters()">🧹 フィルタクリア</button>
                     <select id="jumpToCardSelect"
                         onchange="jumpToCard(this.value); this.value=''"
                         style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.85rem; background: white; cursor: pointer; max-width: 220px; display: none;">
@@ -846,6 +847,10 @@
                 const cols = line.split(/,|\t/).map(s => s.trim().replace(/^"|"$/g, ''));
                 if (cols.length < 4) return;
 
+                // ヘッダー行と推測される行を除外（値がヘッダー名そのものの場合）
+                if (cols[1] === '名前' || cols[1] === '氏名' || cols[1] === '対象者') return;
+                if (cols[0] === '日付' && cols[2] === '項目') return; // 他の一般的なヘッダーパターン
+
                 itemSet.add(cols[2]);
 
                 const parsedDate = parseJapaneseDate(cols[0]);
@@ -880,7 +885,7 @@
                     const existing = map.get(key);
 
                     if (isDedup) {
-                        if (r.ts < existing.ts) {
+                        if (r.ts > existing.ts) {
                             map.set(key, r);
                         }
                     }
@@ -1111,6 +1116,46 @@
             }
         }
 
+        function resetFilters() {
+            if (confirm('すべての入力済みフィルタ（日付・頻度・内容）をクリア（空白）にしますか？')) {
+                headerConfigs.forEach(config => {
+                    config.fDate = '';
+                    config.fFreq = 1;
+                    config.fContent = '';
+                });
+                renderHeaderConfigUI();
+                renderTable();
+                scheduleSaveIDB();
+            }
+        }
+
+        function isMatchContentFilter(contentStr, filterText) {
+            filterText = filterText.trim();
+            if (!filterText) return true;
+            const extractNot = (tokens) => {
+                const notKw = tokens.filter(k => k.startsWith('-') && k.length > 1).map(k => k.slice(1).toLowerCase());
+                const posKw = tokens.filter(k => !k.startsWith('-'));
+                return { posKw, notKw };
+            };
+            const content = String(contentStr).toLowerCase();
+            if (filterText.includes(' OR ')) {
+                const orGroups = filterText.split(' OR ').map(k => k.trim()).filter(k => k.length > 0);
+                return orGroups.some(group => {
+                    const tokens = group.split(/\s+/).filter(k => k.length > 0);
+                    const { posKw, notKw } = extractNot(tokens);
+                    const posOk = posKw.length === 0 || posKw.every(k => content.includes(k.toLowerCase()));
+                    const notOk = notKw.every(k => !content.includes(k));
+                    return posOk && notOk;
+                });
+            } else {
+                const tokens = filterText.split(/\s+/).filter(k => k.length > 0);
+                const { posKw, notKw } = extractNot(tokens);
+                const posOk = posKw.length === 0 || posKw.every(k => content.includes(k.toLowerCase()));
+                const notOk = notKw.every(k => !content.includes(k));
+                return posOk && notOk;
+            }
+        }
+
         function getTableData() {
             const activeConfigs = headerConfigs.filter(c => c.order > 0).sort((a, b) => a.order - b.order);
             const dateLimitValue = document.getElementById('latestDateLimit').value;
@@ -1185,6 +1230,9 @@
             const rows = names.map(name => {
                 const cells = activeConfigs.map(c => {
                     if (c.raw === '__NAME__') {
+                        if (c.fContent && c.fContent.trim() !== '') {
+                            if (!isMatchContentFilter(name, c.fContent)) return null;
+                        }
                         return name;
                     }
 
@@ -1210,39 +1258,7 @@
 
                     if (c.fDate) items = items.filter(it => it.date.includes(c.fDate));
                     if (c.fContent) {
-					// ...
-					const filterText = c.fContent.trim();
-					// NOT キーワード（-で始まるトークン）を先に抽出
-					const extractNot = (tokens) => {
-					    const notKw = tokens.filter(k => k.startsWith('-') && k.length > 1).map(k => k.slice(1).toLowerCase());
-					    const posKw = tokens.filter(k => !k.startsWith('-'));
-					    return { posKw, notKw };
-					};
-					if (filterText.includes(' OR ')) {
-					    // OR検索（各トークンにNOT(-prefix)も対応）
-					    const orGroups = filterText.split(' OR ').map(k => k.trim()).filter(k => k.length > 0);
-					    items = items.filter(it => {
-					        const content = it.content.toLowerCase();
-					        return orGroups.some(group => {
-					            const tokens = group.split(/\s+/).filter(k => k.length > 0);
-					            const { posKw, notKw } = extractNot(tokens);
-					            const posOk = posKw.length === 0 || posKw.every(k => content.includes(k.toLowerCase()));
-					            const notOk = notKw.every(k => !content.includes(k));
-					            return posOk && notOk;
-					        });
-					    });
-					} else {
-					    // AND検索（NOTも対応）
-					    const tokens = filterText.split(/\s+/).filter(k => k.length > 0);
-					    const { posKw, notKw } = extractNot(tokens);
-					    items = items.filter(it => {
-					        const content = it.content.toLowerCase();
-					        const posOk = posKw.length === 0 || posKw.every(k => content.includes(k.toLowerCase()));
-					        const notOk = notKw.every(k => !content.includes(k));
-					        return posOk && notOk;
-					    });
-					}
-					// ...
+                        items = items.filter(it => isMatchContentFilter(it.content, c.fContent));
                     }
 
                     // 内容フィルター使用時のみ行を除外する
